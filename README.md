@@ -13,7 +13,6 @@ own repository; it needs the core package nwcommands but no other model package.
 
        net install nwrem, from(https://raw.githubusercontent.com/thomas-u-grund/nwrem/main/)
 
-   (`thomas-u-grund` is a placeholder for the GitHub account that hosts the repository.)
 
 ## Requirements
 
