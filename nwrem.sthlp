@@ -8,7 +8,6 @@
 {p2colset 9 15 22 2}{...}
 {p2col :nwrem  {hline 2}}Relational event model (ordinal partial likelihood, MLE){p_end}
 {p2colreset}{...}
-{pstd}{it:nwrem version 1.0.1, 24 October 2026}{p_end}{* nwversion}
 
 
 {title:Syntax}
@@ -257,3 +256,6 @@ regardless of how often (contrast with {cmd:frpsndsnd} above, which is about fre
 {title:Also see}
 
 {p 4 14 2}Help: {help nwset}, {help nwattime}, {help nwergm}, {help nwsaom}{p_end}
+
+{hline}
+{pstd}{it:nwrem version 1.0.1, 24 October 2026}{p_end}{* nwversion}
