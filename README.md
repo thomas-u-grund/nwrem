@@ -11,9 +11,9 @@ own repository; it needs the core package nwcommands but no other model package.
    then run `nwinstall`. Required: nwcommands (core), distribution of 5sep2026 or later.
 2. Install this package:
 
-       net install nwrem, from(https://raw.githubusercontent.com/<account>/nwrem/main/)
+       net install nwrem, from(https://raw.githubusercontent.com/thomas-u-grund/nwrem/main/)
 
-   (`<account>` is a placeholder for the GitHub account that hosts the repository.)
+   (`thomas-u-grund` is a placeholder for the GitHub account that hosts the repository.)
 
 ## Requirements
 
