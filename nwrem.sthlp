@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.0.0  24oct2026 author: Thomas Grund}{...}
+{* *! version 1.0.1  24oct2026 author: Thomas Grund}{...}
 {marker topic}
 {helpb nwtopical##analysis_dynamicmodels:[NW-2.6.8] Dynamic & Event-Based Models}
 
@@ -8,7 +8,7 @@
 {p2colset 9 15 22 2}{...}
 {p2col :nwrem  {hline 2}}Relational event model (ordinal partial likelihood, MLE){p_end}
 {p2colreset}{...}
-{pstd}{it:nwrem version 1.0.0, 24 October 2026}{p_end}{* nwversion}
+{pstd}{it:nwrem version 1.0.1, 24 October 2026}{p_end}{* nwversion}
 
 
 {title:Syntax}
@@ -61,6 +61,16 @@
 {p2colreset}{...}
 {pstd}At least one effect must be specified.{p_end}
 
+
+{title:Version}
+
+{p 8 17 2}
+{cmd:nwrem version}
+{p_end}
+
+{pstd}
+{cmd:nwrem version} displays the installed release of {cmd:nwrem}, the version of the {cmd:nwcommands} core, the license and the version of the R package that the results were compared with. It stores the release in {cmd:r(version)} and {cmd:r(date)}, the core version in {cmd:r(core)}, and the license in {cmd:r(license)}. After estimation, the release that produced the results is in {cmd:e(version)}; quote it when reporting an analysis. {cmd:nwversion} lists the core and all installed model packages.
+{p_end}
 
 {title:Description}
 
