@@ -1,0 +1,5 @@
+v 3
+d nwrem: relational event models for Stata
+
+p nwrem
+d nwrem. Relational event models (Butts 2008) for event-time networks declared with nwset
