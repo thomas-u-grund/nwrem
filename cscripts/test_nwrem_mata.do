@@ -1,8 +1,17 @@
 cscript
 
+* The core package nwcommands is found through the environment variable NWCORE (path of the core checkout).
+local nwcore : env NWCORE
+if `"`nwcore'"' == "" {
+	di as error "set the environment variable NWCORE to the directory of the nwcommands (core) package"
+	exit 198
+}
+adopath ++ `"`nwcore'"'
+adopath ++ `"`c(pwd)'"'
+quietly do `"`nwcore'/unw_core.do"'
 do unw_rem.do
 
-* Certifies unw_rem.do's unit-1 engine (docs/REM_ROADMAP.md): the
+* Certifies unw_rem.do's unit-1 engine (the development notes): the
 * degree-accumulator semantics, self-loop rejection, the analytic
 * gradient's exactness, and the ordinal partial-likelihood fit's
 * ability to recover the correct SIGN of known coefficients across
@@ -11,7 +20,7 @@ do unw_rem.do
 *
 * Test 1 is a REAL external cross-check, not just internal
 * self-consistency: the exact 3-actor/4-event toy sequence and expected
-* cumindeg/cumoutdeg values are the ones docs/REM_R_STUDY.md section 3a
+* cumindeg/cumoutdeg values are the ones the development notes section 3a
 * captured by running relevent::acl.deg() itself and observing its
 * output - reproduced here as literal expected values, matching
 * dev/saom_rsiena_crosscheck.do's own "captured real reference values as
@@ -38,7 +47,7 @@ S1.init(toy_events, 3)
 S1.build_degree_accumulators()
 
 // Expected values captured directly from real relevent::acl.deg() output
-// (docs/REM_R_STUDY.md section 3a) - row i = state strictly BEFORE event i.
+// (the development notes section 3a) - row i = state strictly BEFORE event i.
 expected_cumoutdeg = (0,0,0 \ 1,0,0 \ 2,0,0 \ 2,1,0)
 expected_cumindeg  = (0,0,0 \ 0,1,0 \ 0,1,1 \ 1,1,1)
 
@@ -70,7 +79,7 @@ di as text "{hline 60}"
 
 * This is the strongest correctness guarantee in this suite: no
 * simulation randomness, deterministic to the last decimal. Confirms
-* rem_loglik_grad_unit1()'s closed-form score (docs/REM_R_STUDY.md
+* rem_loglik_grad_unit1()'s closed-form score (the development notes
 * section 5) against an independent numerical check on real
 * RemState-accumulated data (not a toy formula in isolation).
 
@@ -106,7 +115,7 @@ di as text "{hline 60}"
 di as text "Test 4: fitted likelihood beats the null; simulate-then-recover shown for inspection only"
 di as text "{hline 60}"
 
-* Design note (see docs/REM_R_STUDY.md section 3a-ii for the full,
+* Design note (see the development notes section 3a-ii for the full,
 * empirically-verified account): NODSnd/NIDRec's own cross-sectional
 * variance shrinks as the event sequence grows (each is a running
 * average converging toward 1/n for every actor), so later events

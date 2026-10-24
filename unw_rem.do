@@ -1,10 +1,18 @@
 /*
+ * Copyright (C) 2026 Thomas U. Grund
+ * This file is part of nwrem, a Stata package derived from the R package 'relevent' (Carter T. Butts; GPL (>= 2)).
+ * nwrem is free software: you can redistribute it and/or modify it under the terms of the GNU General
+ * Public License, version 3, as published by the Free Software Foundation. It is distributed in the hope
+ * that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE. See the file LICENSE for the full text.
+ */
+/*
 	unw_rem.do -- native relational event model (REM) estimation core
 	for nwcommands (nwrem).
 
-	See docs/REM_ROADMAP.md (scope/status) and docs/REM_ARCHITECTURE.md
+	See the development notes (scope/status) and the development notes
 	(design). Standalone engine - deliberately reuses NOTHING from
-	unw_ergm.do/unw_saom.do (see REM_ROADMAP.md's own "Why a separate
+	unw_ergm.do/unw_saom.do (see the development notes' own "Why a separate
 	engine" section: the shared-engine question was raised and
 	explicitly declined, since REM's per-event O(n^2) risk-set
 	evaluation is structurally unlike ERGM's MCMC toggle-accept or
@@ -15,16 +23,16 @@
 	Clean-room implementation against the published REM statistical
 	framework (Butts, C.T. (2008). "A Relational Event Framework for
 	Social Action." Sociological Methodology, 38(1), 155-200) and this
-	project's own docs/REM_R_STUDY.md (which records what
+	project's own the development notes (which records what
 	relevent::rem.dyad's likelihood/effects compute and why - verified
 	directly against relevent's own public C source and empirical
 	behavior on toy input, never copied from it). No relevent source
 	code, comment, or identifier is present here - see
-	docs/REM_PROVENANCE.md.
+	the development notes.
 
 	Sourced live during development (`do unw_rem.do`), matching
 	unw_saom.do's own convention - not yet compiled into
-	lib/lnwcommands.mlib (see REM_ROADMAP.md's "one rebuild at the end,
+	lib/lnwcommands.mlib (see the development notes' "one rebuild at the end,
 	not mid-flight" rule).
 */
 
@@ -42,7 +50,7 @@ mata set matastrict off
 	effects (NODSnd/NIDRec). Row i of cumindeg/cumoutdeg holds the
 	cumulative degree from events 1..(i-1) ONLY (strictly prior
 	history, no lookahead into event i itself) - this is the exact
-	semantics docs/REM_R_STUDY.md section 3a empirically verified
+	semantics the development notes section 3a empirically verified
 	against relevent::acl.deg()'s own output on a toy sequence, not
 	assumed from the "cumulative" naming alone.
 */
@@ -63,7 +71,7 @@ void RemState::init(real matrix rawevents, real scalar nn) {
 
 	// REM's risk set is defined over i!=j dyads by convention (matching
 	// relevent's own "selfloops are not permitted" - see
-	// docs/REM_R_STUDY.md) - reject rather than silently drop, since a
+	// the development notes) - reject rather than silently drop, since a
 	// silently-dropped self-loop event would change nevents without
 	// the caller necessarily noticing.
 	for (k=1; k<=rows(rawevents); k++) {
@@ -106,7 +114,7 @@ void RemState::build_degree_accumulators() {
 	testing this exact function (optimize() reported "flat region
 	encountered" for an intercept parameter; direct likelihood
 	evaluation confirmed zero sensitivity to it) - see
-	docs/REM_R_STUDY.md section 1b for the full account, including why
+	the development notes section 1b for the full account, including why
 	this also explains why none of relevent's own 24 named effects is a
 	generic intercept.
 
@@ -114,17 +122,17 @@ void RemState::build_degree_accumulators() {
 	  ll_i = lrm[s,r] - log( sum over all (j,k), j!=k, of exp(lrm[j,k]) )
 	where lrm[j,k] = theta_nodsnd*NODSnd_j(i) + theta_nidrec*NIDRec_k(i)
 	-- the standard Cox-style partial likelihood (see
-	docs/REM_R_STUDY.md section 2), verified against relevent's own
+	the development notes section 2), verified against relevent's own
 	drem_n2llik_R() structure (read to confirm, not copied).
 
 	First-event convention (i=1, no prior events): NODSnd/NIDRec both
 	defined as 1/(n-1) for every actor, exactly matching relevent's own
-	explicit fallback for this case (see docs/REM_R_STUDY.md section 3a
+	explicit fallback for this case (see the development notes section 3a
 	- corrected there too after this project's own earlier reading of
 	a partial source excerpt wrongly concluded this was left undefined).
 
 	Analytic gradient (implemented alongside the likelihood, not
-	deferred as originally planned in docs/REM_R_STUDY.md section 5 -
+	deferred as originally planned in the development notes section 5 -
 	brought forward after observing wide estimate-to-estimate variance
 	under numerical-gradient BFGS during unit-1's own simulate-then-
 	recover testing; the analytic score is the standard multinomial-
@@ -160,7 +168,7 @@ void rem_loglik_grad_unit1(real rowvector theta, pointer(class RemState scalar) 
 			// source while implementing units 2/5): relevent does NOT
 			// leave the first event as undefined 0/0, as this
 			// project's own earlier read of a partial excerpt of
-			// lambda() wrongly concluded (docs/REM_R_STUDY.md section
+			// lambda() wrongly concluded (the development notes section
 			// 3a's original text) - the full switch case has an
 			// explicit `if(it>0){...}else{dv[j]=1.0/(nv-1.0)}` branch.
 			// Matched exactly here now that the correct formula is
@@ -216,7 +224,7 @@ void rem_eval_unit1(real scalar todo, real rowvector theta, pointer(class RemSta
 	RemFitUnit1() -- fits the unit-1 model (NODSnd + NIDRec, no
 	intercept - see rem_loglik_unit1()'s own comment for why) via
 	Mata's own built-in optimize() (BFGS, numerical gradient for
-	this first unit - see docs/REM_R_STUDY.md section 5 for why an
+	this first unit - see the development notes section 5 for why an
 	external optimizer dependency is unnecessary and why an analytic
 	gradient is deferred). Returns coefficients + SEs into Stata via
 	st_matrix()/st_numscalar(), consumed by nwrem.ado.
@@ -307,7 +315,7 @@ void RemFitUnit1(real matrix eventmat, real scalar n, string scalar bname, strin
 	order. Every formula below was read from relevent's own C source
 	(src/relevent.c's lambda()/logrm_rceff()/logrm_normint()/
 	logrm_irr()/acl_adj()) to verify this project's own independent
-	derivation - never copied into Mata (see docs/REM_PROVENANCE.md).
+	derivation - never copied into Mata (see the development notes).
 
 	Fixed effect order:
 	  1  NODSnd     row(sender)    = out-degree share
@@ -348,7 +356,7 @@ void RemFitUnit1(real matrix eventmat, real scalar n, string scalar bname, strin
 
 	Effect 12 (unit 4b, CovEvent): relevent's own dyadic/pair
 	covariate, mode=4 "event-wise" in logrm_rceff() (relevent's C
-	source, read to verify - see docs/REM_PROVENANCE.md): unlike
+	source, read to verify - see the development notes): unlike
 	effects 9-11 (a per-actor value broadcast across rows or columns),
 	CovEvent supplies an INDEPENDENT value for every ordered (j,k)
 	dyad directly - `lrm[j,k] += theta*covevmat[j,k]`, no broadcasting
@@ -598,7 +606,7 @@ void RemFitMulti(real matrix eventmat, real scalar n, real rowvector activevec,
 	nparams = sum(activevec)
 	if (nparams == 0) _error("nwrem: at least one effect must be selected.")
 
-	// Performance fix (found via direct profiling, docs/REM_ROADMAP.md's
+	// Performance fix (found via direct profiling, the development notes'
 	// own "optimizer performance" entry): the multi-minute slowdown
 	// observed when fitting several correlated degree effects together
 	// was never about per-call cost at the SCALE this fix was originally
@@ -713,7 +721,7 @@ void RemFitMulti(real matrix eventmat, real scalar n, real rowvector activevec,
 		// BFGS/NR and left it uncapped - wrong, in a different way than
 		// BFGS/NR's own failure mode. BFGS/NR waste iterations on a bad
 		// START; NM can waste iterations CONVERGING SLOWLY along a
-		// genuinely flat ridge (docs/REM_ROADMAP.md's own degree-effect
+		// genuinely flat ridge (the development notes' own degree-effect
 		// collinearity finding) even from a perfectly good start,
 		// since derivative-free methods are inherently slow to converge
 		// along a flat direction. Confirmed directly: repeated real

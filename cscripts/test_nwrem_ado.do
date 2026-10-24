@@ -5,8 +5,16 @@ cscript
 * matrix (that's what cscripts/test_nwrem_mata.do already certifies).
 * Matches cscripts/test_nwsaom_ado.do's own role in the nwsaom suite.
 
-do unw_core.do
-do unw_ergm.do
+* The core package nwcommands is found through the environment variable NWCORE (path of the core checkout).
+local nwcore : env NWCORE
+if `"`nwcore'"' == "" {
+	di as error "set the environment variable NWCORE to the directory of the nwcommands (core) package"
+	exit 198
+}
+adopath ++ `"`nwcore'"'
+adopath ++ `"`c(pwd)'"'
+quietly do `"`nwcore'/unw_core.do"'
+* (not needed here: unw_ergm.do belongs to another package)
 do unw_rem.do
 
 nwclear
@@ -151,7 +159,7 @@ di as text "  correctly rejected zero-effect call (rc=" _rc ")"
 * Two-mode rejection (nwrem.ado's own explicit guard, see its header
 * comment) is NOT exercised here: nwset's own time()/interval()/
 * eventtime() options cannot currently be combined with twomode/
-* bipartite in the same call (docs/ROADMAP.md's own tracked
+* bipartite in the same call (the development notes' own tracked
 * composability gap), so no live network can reach is2mode()=="true"
 * while also being an event-type network via the public interface
 * today - the same "genuinely unreachable from outside, not a bug"

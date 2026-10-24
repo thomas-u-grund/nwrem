@@ -1,3 +1,9 @@
+* Copyright (C) 2026 Thomas U. Grund
+* This file is part of nwrem, a Stata package derived from the R package 'relevent' (Carter T. Butts; GPL (>= 2)).
+* nwrem is free software: you can redistribute it and/or modify it under the terms of the GNU General
+* Public License, version 3, as published by the Free Software Foundation. It is distributed in the hope
+* that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+* or FITNESS FOR A PARTICULAR PURPOSE. See the file LICENSE for the full text.
 
 capture program drop nwrem
 program nwrem, eclass
@@ -15,7 +21,7 @@ program nwrem, eclass
 	// two-mode rejection (harmonisation unit 158 survey): currently
 	// unreachable in practice (nwset's own time()/interval()/
 	// eventtime() cannot yet be combined with twomode/bipartite in the
-	// same call, docs/ROADMAP.md's own tracked composability item), so
+	// same call, the development notes' own tracked composability item), so
 	// no live network can reach this point with `is2mode'=="true" today
 	// - but nwrem's own 14-effect engine (unw_rem.do) was derived and
 	// certified entirely on one-mode data and has never been checked
@@ -57,7 +63,7 @@ program nwrem, eclass
 		local __nwrem_sep ","
 	}
 	if `__nwrem_nactive' == 0 {
-		di as error "nwrem requires at least one effect: {bf:nodsnd} {bf:nidrec} {bf:nidsnd} {bf:nodrec} {bf:ntdegsnd} {bf:ntdegrec} {bf:frpsndsnd} {bf:frrecsnd} {bf:covsnd()} {bf:covrec()} {bf:covint()} {bf:covevent()} {bf:rsndsnd} {bf:rrecsnd} (see {help nwrem} for what each computes; docs/REM_ROADMAP.md for what is not yet implemented)."
+		di as error "nwrem requires at least one effect: {bf:nodsnd} {bf:nidrec} {bf:nidsnd} {bf:nodrec} {bf:ntdegsnd} {bf:ntdegrec} {bf:frpsndsnd} {bf:frrecsnd} {bf:covsnd()} {bf:covrec()} {bf:covint()} {bf:covevent()} {bf:rsndsnd} {bf:rrecsnd} (see {help nwrem} for what each computes; the development notes for what is not yet implemented)."
 		error 198
 	}
 

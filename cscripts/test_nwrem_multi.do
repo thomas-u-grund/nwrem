@@ -1,10 +1,19 @@
 cscript
 
+* The core package nwcommands is found through the environment variable NWCORE (path of the core checkout).
+local nwcore : env NWCORE
+if `"`nwcore'"' == "" {
+	di as error "set the environment variable NWCORE to the directory of the nwcommands (core) package"
+	exit 198
+}
+adopath ++ `"`nwcore'"'
+adopath ++ `"`c(pwd)'"'
+quietly do `"`nwcore'/unw_core.do"'
 do unw_rem.do
 
 * Certifies unw_rem.do's generalized multi-effect engine (units 2 + 5 +
 * unit 4's static covariates - CovSnd/CovRec/CovInt/CovEvent - and unit
-* 3's recency-rank effects RSndSnd/RRecSnd, docs/REM_ROADMAP.md):
+* 3's recency-rank effects RSndSnd/RRecSnd, the development notes):
 * consistency with the already-certified unit-1 engine when configured
 * identically, and exact analytic-vs-numerical gradient agreement for
 * every one of the 14 effects individually and in combination - the same
@@ -141,7 +150,7 @@ di as text "{hline 60}"
 * a positive FrPSndSnd coefficient fits better than a negative one -
 * the qualitative direction check this project's own established
 * precedent uses for effects where tight point-recovery is not a
-* reliable bar (docs/REM_R_STUDY.md section 3a-ii's own reasoning
+* reliable bar (the development notes section 3a-ii's own reasoning
 * applies here too: inertia is itself a running-fraction statistic).
 
 mata:
