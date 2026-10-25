@@ -15,6 +15,7 @@ program nwrem, eclass
 	}
 	syntax [anything(name=netname)] [, NODSND NIDREC NIDSND NODREC NTDEGSND NTDEGREC FRPSNDSND FRRECSND COVSND(varname numeric) COVREC(varname numeric) COVINT(varname numeric) COVEVENT(string) RSNDSND RRECSND SEED(integer -1)]
 	set more off
+	_nwrem_libcheck
 
 	_nwsyntax `netname', max(1)
 

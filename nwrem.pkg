@@ -7,6 +7,7 @@ d Requires nwcommands (core), distribution of 5sep2026 or later
 d Version: 1.0.2
 d Distribution-Date: 25oct2026
 f nwrem.ado
+f _nwrem_libcheck.ado
 f nwrem_version.ado
 f nwrem.sthlp
 f lib/lnwrem.mlib
