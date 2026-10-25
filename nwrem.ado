@@ -164,4 +164,24 @@ program nwrem, eclass
 	di as text "Events: " as result `nevents' _col(40) as text "Log likelihood: " as result %9.4f `__nwrem_ll'
 	di as text "{hline 60}"
 	ereturn display
+	// effects without a usable standard error: exactly collinear with other effects in the model (for example the
+	// total-degree share ntdegsnd together with nodsnd and nidsnd), or not identified by the data
+	local __nwrem_bad ""
+	local __nwrem_k = colsof(e(b))
+	forvalues __nwrem_j = 1/`__nwrem_k' {
+		local __nwrem_v = el(e(V), `__nwrem_j', `__nwrem_j')
+		if missing(`__nwrem_v') | `__nwrem_v' <= 0 {
+			local __nwrem_bad "`__nwrem_bad' `: word `__nwrem_j' of `__nwrem_collabs''"
+		}
+		else if sqrt(`__nwrem_v') > 100 {
+			local __nwrem_bad "`__nwrem_bad' `: word `__nwrem_j' of `__nwrem_collabs''"
+		}
+	}
+	ereturn local unidentified "`=trim("`__nwrem_bad'")'"
+	if "`__nwrem_bad'" != "" {
+		di as text "Note: no usable standard error for" as result "`__nwrem_bad'" as text "."
+		di as text "      These effects are not identified: typically an effect is an exact function of others in the model"
+		di as text "      (the total-degree share ntdegsnd is the sum of nodsnd and nidsnd). Its estimate is arbitrary;"
+		di as text "      drop one of the effects."
+	}
 end

@@ -190,6 +190,7 @@ interpret standard errors accordingly and prefer larger event counts where possi
 	  {bf:e(cmd)}		{bf:nwrem}
 	  {bf:e(title)}		"Relational event model (ordinal partial likelihood, MLE)"
 	  {bf:e(depvar)}	name of the event network fit
+	  {bf:e(unidentified)}	effects without a usable standard error (collinear with others, or a standard error above 100); empty when all are identified
 
 	Matrices
 	  {bf:e(b)}		coefficient vector
