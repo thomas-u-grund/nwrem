@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.0.3  25oct2026 author: Thomas Grund}{...}
+{* *! version 1.0.4  25oct2026 author: Thomas Grund}{...}
 {marker topic}
 {helpb nwtopical##analysis_dynamicmodels:[NW-2.6.8] Dynamic & Event-Based Models}
 
@@ -259,4 +259,4 @@ regardless of how often (contrast with {cmd:frpsndsnd} above, which is about fre
 {p 4 14 2}Help: {help nwset}, {help nwattime}, {help nwergm}, {help nwsaom}{p_end}
 
 {hline}
-{pstd}{it:nwrem version 1.0.3, 25 October 2026}{p_end}{* nwversion}
+{pstd}{it:nwrem version 1.0.4, 25 October 2026}{p_end}{* nwversion}
