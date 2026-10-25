@@ -84,7 +84,10 @@ void RemState::init(real matrix rawevents, real scalar nn) {
 	// get_eventlist() makes no ordering guarantee (confirmed by reading
 	// unw_core.do's own nwattime_slice_event(), which scans unordered) -
 	// the ordinal partial likelihood requires chronological order.
-	ord = order(rawevents[.,3], 1)
+	// Events with the SAME time keep the order in which the network lists them: order() on the time column alone breaks
+	// ties arbitrarily (it depends on the state of the random-number generator), so the same data gave different risk sets
+	// and a different likelihood from run to run. The row number as second key makes the sort stable.
+	ord = order((rawevents[.,3], (1::rows(rawevents))), (1, 2))
 	events = rawevents[ord,.]
 	nevents = rows(events)
 }
