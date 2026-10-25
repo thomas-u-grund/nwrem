@@ -1,6 +1,6 @@
 # nwrem
 
-<!--version-->**Version 1.0.6** (released 25 October 2026)<!--/version-->
+<!--version-->**Version 1.0.7** (released 26 October 2026)<!--/version-->
 
 `nwrem` fits relational event models (REM) to a sequence of timed events between actors (who sends to whom, when), declared as an event-type temporal network with `nwset ..., eventtime()`. It estimates degree, inertia, recency and covariate effects by (partial) likelihood.
 
@@ -18,7 +18,7 @@ own repository; it needs the core package nwcommands but no other model package.
 `net install nwrem` installs the latest release (the state of the main branch). To install a specific version, point `from()` at the
 release tag (GitHub serves every tag under its own raw URL), for example version 1.0.0:
 
-       net install nwrem, from(https://raw.githubusercontent.com/thomas-u-grund/nwrem/v1.0.6/) replace
+       net install nwrem, from(https://raw.githubusercontent.com/thomas-u-grund/nwrem/v1.0.7/) replace
 
 `net describe nwrem` shows the version and distribution date, `nwrem version` the package, core and plugin versions, and `e(version)`
 holds the package version in the stored results. Release history: `CHANGELOG.md`; how releases are made: `RELEASING.md`.
