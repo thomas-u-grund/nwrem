@@ -3,9 +3,12 @@
 All notable changes to nwrem are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project uses [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.0.8] - 2026-10-26
+
+Patch release. Works with nwcommands 3.6.0 and later; no change of the Mata library.
 
 ### Fixed
+- `covevent()` with a two-mode network (missing cells between nodes of the same mode) ended in repeated "initial values not feasible" messages; it is now refused with the common message and error 6088. A covariate network with missing tie values stops with error 416.
 - The error message of `nwrem` without an effect no longer refers to internal development notes.
 
 ## [1.0.7] - 2026-10-26
