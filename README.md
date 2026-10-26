@@ -1,6 +1,6 @@
 # nwrem
 
-<!--version-->**Version 1.0.8** (released 26 October 2026)<!--/version-->
+<!--version-->**Version 1.0.9** (released 26 October 2026)<!--/version-->
 
 `nwrem` fits relational event models (REM) to a sequence of timed events between actors (who sends to whom, when), declared as an event-type temporal network with `nwset ..., eventtime()`. It estimates degree, inertia, recency and covariate effects by (partial) likelihood.
 
@@ -9,16 +9,18 @@ own repository; it needs the core package nwcommands but no other model package.
 
 ## Install
 
-1. Install the core package first (Stata): `net install nwcommands, from(<URL of the nwcommands distribution>)`
-   then run `nwinstall, everything` (the core and all four model packages in one step) or `nwinstall, all` (core only). Required: nwcommands (core), version 3.6.0 or later.
-2. Install this package:
+1. Install the core package first (Stata): `net install nwcommands, from(https://nwcommands.org/net/) replace`
+   (alternative: `from(https://raw.githubusercontent.com/thomas-u-grund/nwcommands/main/)`). Required: nwcommands (core), version 3.6.0 or later.
+2. Install this package from the core: `nwinstall, modelpkg(nwrem)`.
+   `nwinstall, everything` installs the core and all four model packages in one step; `nwinstall, all` installs the core only and `nwinstall, models` adds the model packages to it.
+
+`nwinstall` installs the latest release (the state of the main branch). Without `nwinstall`, the package can be installed directly from GitHub:
 
        net install nwrem, from(https://raw.githubusercontent.com/thomas-u-grund/nwrem/main/) replace
 
-`net install nwrem` installs the latest release (the state of the main branch). To install a specific version, point `from()` at the
-release tag (GitHub serves every tag under its own raw URL), for example version 1.0.0:
+To install a specific version, point `from()` at the release tag (GitHub serves every tag under its own raw URL), for example version 1.0.8:
 
-       net install nwrem, from(https://raw.githubusercontent.com/thomas-u-grund/nwrem/v1.0.8/) replace
+       net install nwrem, from(https://raw.githubusercontent.com/thomas-u-grund/nwrem/v1.0.9/) replace
 
 `net describe nwrem` shows the version and distribution date, `nwrem version` the package, core and plugin versions, and `e(version)`
 holds the package version in the stored results. Release history: `CHANGELOG.md`; how releases are made: `RELEASING.md`.

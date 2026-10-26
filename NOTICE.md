@@ -1,6 +1,6 @@
 # NOTICE
 
-<!--version-->**Version 1.0.8** (released 26 October 2026)<!--/version-->
+<!--version-->**Version 1.0.9** (released 26 October 2026)<!--/version-->
 
 nwrem is Copyright (C) 2026 Thomas U. Grund and is distributed under the GNU General Public License, version 3 (file `LICENSE`).
 
@@ -17,9 +17,9 @@ Estimates were compared with `relevent::rem.dyad()` (version 1.2-1) on identical
 
 ## AI assistance
 
-The software was developed with Claude Code (Anthropic), an AI coding assistant, working under the author's direction. It helped port algorithms from relevent into Stata, Mata and C and helped write the tests. The author specified the scope, reviewed the code, and is responsible for the package. Its correctness rests on validation, not on the assistant: the results are compared numerically with relevent, and the test suite reruns these comparisons.
+The software was developed with Claude Code (Anthropic), an AI coding assistant, working under the author's direction. It helped port algorithms from relevent into Stata and Mata and helped write the tests. The author specified the scope, reviewed the code, and is responsible for the package. Its correctness rests on validation, not on the assistant: the results are compared numerically with relevent, and the test suite reruns these comparisons.
 
 ## How to cite
 
-Grund, T. U. (2026). nwrem: a Stata package (version 1.0.8). GitHub. https://github.com/thomas-u-grund/nwrem
+Grund, T. U. (2026). nwrem: a Stata package (version 1.0.9). GitHub. https://github.com/thomas-u-grund/nwrem
 Please also cite the core package (Grund, T. U., nwcommands) and the work this package is derived from (see above).

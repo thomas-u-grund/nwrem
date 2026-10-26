@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.0.8  26oct2026 author: Thomas Grund}{...}
+{* *! version 1.0.9  26oct2026 author: Thomas Grund}{...}
 {marker topic}
 {helpb nwtopical##analysis_dynamicmodels:[NW-2.6.8] Dynamic & Event-Based Models}
 
@@ -106,8 +106,7 @@ variation itself is a disclosed, understood property, not noise to average away:
 precision below), so {cmd:nwrem}'s own retry-based optimizer sometimes needs only one attempt and
 sometimes several before converging - R's own single {cmd:optim(BFGS)} call has no equivalent
 retry strategy for the same ridge, which is why {cmd:nwrem} still wins on every trial despite its
-own variation. See {cmd:dev/rem_benchmark.R}/{cmd:.do} and
-{cmd:dev/rem_benchmark_multi.R}/{cmd:.do} in the package's own source for the exact scripts.
+own variation. These timings are from one machine and one data set; they will differ on yours.
 
 {pstd}
 {cmd:nwrem} fits any combination of the 14 effects above (at least one required). There is
@@ -115,8 +114,7 @@ deliberately no intercept option - a term constant across every candidate pair a
 cancels out exactly in the ordinal likelihood's own normalization (the same reason Cox
 proportional-hazards models have no identifiable baseline intercept), so one is never estimable
 here regardless of what is requested. Effects not yet implemented (triadic/shared-partner effects,
-fixed effects, the full non-ordinal/waiting-time likelihood, Bayesian estimation) are tracked, not
-silently missing - see the package's own development roadmap for what is planned next.
+fixed effects, the full non-ordinal/waiting-time likelihood, Bayesian estimation) are not implemented.
 
 {pstd}
 {bf:rsndsnd}/{bf:rrecsnd} are different from {bf:frpsndsnd}/{bf:frrecsnd}: the latter measure HOW
@@ -259,4 +257,4 @@ regardless of how often (contrast with {cmd:frpsndsnd} above, which is about fre
 {p 4 14 2}Help: {help nwset}, {help nwattime}, {help nwergm}, {help nwsaom}{p_end}
 
 {hline}
-{pstd}{it:nwrem version 1.0.8, 26 October 2026}{p_end}{* nwversion}
+{pstd}{it:nwrem version 1.0.9, 26 October 2026}{p_end}{* nwversion}
