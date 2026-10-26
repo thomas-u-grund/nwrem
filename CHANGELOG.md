@@ -3,6 +3,11 @@
 All notable changes to nwrem are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+- The error message of `nwrem` without an effect no longer refers to internal development notes.
+
 ## [1.0.7] - 2026-10-26
 
 ### Changed
