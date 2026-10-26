@@ -111,11 +111,18 @@ program nwrem, eclass
 	tempname __nwrem_covevmat
 	if "`covevent'" != "" {
 		_nwsyntax `covevent', max(1) other(covev)
+		// a two-mode covariate network has missing cells between nodes of the same mode (core >= 3.6.0 rule: refused with error 6088)
+		_nw2guard `covevent', cmd(nwrem covevent())
 		if `covevnodes' != `nodes' {
 			di as error "covevent() network `covevent' has `covevnodes' actors but `netname' has `nodes' - covevent() requires the same actors as `netname'."
 			error 198
 		}
 		mata: `__nwrem_covevmat' = *(`covevnetobj'->get_matrix_mod(1,1))
+		mata: st_local("__nwrem_covmiss", strofreal(missing(`__nwrem_covevmat') - missing(diagonal(`__nwrem_covevmat'))))
+		if `__nwrem_covmiss' > 0 {
+			di as error "covevent() network `covevent' has `__nwrem_covmiss' missing tie values; the covariate must be defined for every ordered pair of actors."
+			error 416
+		}
 	}
 	else {
 		mata: `__nwrem_covevmat' = J(`nodes', `nodes', 0)
