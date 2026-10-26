@@ -1,4 +1,4 @@
-*! version 1.0.7  26oct2026 nwrem
+*! version 1.0.8  26oct2026 nwrem
 * Copyright (C) 2026 Thomas U. Grund
 * This file is part of nwrem, a Stata package derived from the R package 'relevent' (Carter T. Butts; GPL (>= 2)).
 * nwrem is free software: you can redistribute it and/or modify it under the terms of the GNU General
@@ -158,7 +158,7 @@ program nwrem, eclass
 
 	ereturn post `b' `V', obs(`nevents')
 	ereturn local cmd "nwrem"
-	ereturn local version "1.0.7"
+	ereturn local version "1.0.8"
 	ereturn local title "Relational event model (ordinal partial likelihood, MLE)"
 	ereturn local depvar "`netname'"
 	ereturn scalar N = `nevents'

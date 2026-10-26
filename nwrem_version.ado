@@ -1,10 +1,10 @@
-*! version 1.0.7  26oct2026 nwrem version: shows the package, core, plugin and reference versions
+*! version 1.0.8  26oct2026 nwrem version: shows the package, core, plugin and reference versions
 * Copyright (C) 2026 Thomas U. Grund
 * nwrem is free software under the GNU General Public License, version 3 (file LICENSE).
 capture program drop nwrem_version
 program nwrem_version, rclass
 	version 14
-	local __pkgver "1.0.7"
+	local __pkgver "1.0.8"
 	local __pkgdate "26oct2026"
 	// the core package: its distribution date from Stata's package list (net install writes it to stata.trk)
 	local __core "not found"
