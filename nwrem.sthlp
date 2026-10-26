@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.0.9  26oct2026 author: Thomas Grund}{...}
+{* *! version 1.0.10  26oct2026 author: Thomas Grund}{...}
 {marker topic}
 {helpb nwtopical##analysis_dynamicmodels:[NW-2.6.8] Dynamic & Event-Based Models}
 
@@ -92,21 +92,22 @@ step. It requires {it:netname} to already be declared as an {bf:event}-type temp
 	{cmd:. nwrem mynet, nodsnd nidrec}
 
 {pstd}
-{bf:Speed}: on direct head-to-head wall-clock benchmarks against R's own {cmd:relevent::rem.dyad()}
-1.2-1 (identical data, identical effect set, {cmd:ordinal=TRUE}, {cmd:fit.method="MLE"} on the R
-side; {cmd:nwrem}'s own pure-Mata engine on this side - {bf:no native C backend yet}): a 2-effect
-model ({bf:nodsnd}+{bf:nidrec}, 30 actors, 2000 events) runs consistently around 0.8s vs. R's
-1.54s - roughly 2x faster, with little run-to-run variation. The full 8-effect degree+inertia
-model on the identical data is faster than R on {bf:every} repeated trial measured, but with real
-variation run to run - 9.2s to 48.6s across thirteen repeated fits (two independent benchmark
-sessions), median around 39s, against R's own single measured 107.75s: roughly {bf:2.5-3x faster}
-typically, up to {bf:12x} when the optimizer's first attempt happens to converge directly. The
-variation itself is a disclosed, understood property, not noise to average away: this particular
-8-effect model sits on the degree-effect family's own collinearity ridge (see the note on
-precision below), so {cmd:nwrem}'s own retry-based optimizer sometimes needs only one attempt and
-sometimes several before converging - R's own single {cmd:optim(BFGS)} call has no equivalent
-retry strategy for the same ridge, which is why {cmd:nwrem} still wins on every trial despite its
-own variation. These timings are from one machine and one data set; they will differ on yours.
+{bf:Speed}: {cmd:nwrem} runs in Mata (there is no compiled plugin). Timed against R's
+{cmd:relevent::rem.dyad()} 1.2-1 ({cmd:ordinal=TRUE}, maximum likelihood, covariance matrix computed by both) on
+simulated event streams of 200 to 20,000 events among 20 to 100 actors, on one machine (Apple M5 Pro, Stata 17,
+R 4.6, 26 October 2026; median of 5 fits, 3 or fewer for the largest), the ratio of the time of {cmd:relevent} to
+the time of {cmd:nwrem} ranged from 0.75 to 36. {cmd:nwrem} was faster with the degree effects
+({bf:nodsnd nidrec nidsnd nodrec}: 1.3 to 5.9 times; the two-effect model at 200 events was equal, 0.92), with {bf:covsnd covrec covint} (1.7 to 2.5 times) and,
+much more strongly, with {bf:frpsndsnd frrecsnd} added (14 times at 200 events, 36 times at 1,000 events;
+at 5,000 events {cmd:relevent} needed more than 10 minutes, {cmd:nwrem} 34 seconds). With the recency effects
+{bf:rsndsnd rrecsnd} {cmd:nwrem} was slightly slower up to 1,000 events (ratios 0.75 to 0.9)  and about equal at
+5,000 events; with 20,000 events and these effects neither program finished within 10 minutes. The largest
+fits ({cmd:nwrem} with 20,000 events and 100 actors) took between 1.6 and 9.5 minutes. If {cmd:relevent} is run
+with {cmd:hessian=FALSE} it is 1.4 to 2.2 times faster than in these timings, which makes {cmd:nwrem}
+the slower program for the smallest models and for the recency effects. The time grows with the number of events
+times the square of the number of actors. The coefficients of the two programs agree to about three
+significant digits (largest absolute difference 5e-3 for coefficients of about 25), not to six; both stop
+at their own convergence tolerance. Timings depend on the machine, the data and the effects.
 
 {pstd}
 {cmd:nwrem} fits any combination of the 14 effects above (at least one required). There is
@@ -257,4 +258,4 @@ regardless of how often (contrast with {cmd:frpsndsnd} above, which is about fre
 {p 4 14 2}Help: {help nwset}, {help nwattime}, {help nwergm}, {help nwsaom}{p_end}
 
 {hline}
-{pstd}{it:nwrem version 1.0.9, 26 October 2026}{p_end}{* nwversion}
+{pstd}{it:nwrem version 1.0.10, 26 October 2026}{p_end}{* nwversion}

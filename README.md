@@ -1,6 +1,6 @@
 # nwrem
 
-<!--version-->**Version 1.0.9** (released 26 October 2026)<!--/version-->
+<!--version-->**Version 1.0.10** (released 26 October 2026)<!--/version-->
 
 `nwrem` fits relational event models (REM) to a sequence of timed events between actors (who sends to whom, when), declared as an event-type temporal network with `nwset ..., eventtime()`. It estimates degree, inertia, recency and covariate effects by (partial) likelihood.
 
@@ -20,7 +20,7 @@ own repository; it needs the core package nwcommands but no other model package.
 
 To install a specific version, point `from()` at the release tag (GitHub serves every tag under its own raw URL), for example version 1.0.8:
 
-       net install nwrem, from(https://raw.githubusercontent.com/thomas-u-grund/nwrem/v1.0.9/) replace
+       net install nwrem, from(https://raw.githubusercontent.com/thomas-u-grund/nwrem/v1.0.10/) replace
 
 `net describe nwrem` shows the version and distribution date, `nwrem version` the package, core and plugin versions, and `e(version)`
 holds the package version in the stored results. Release history: `CHANGELOG.md`; how releases are made: `RELEASING.md`.
@@ -30,6 +30,10 @@ holds the package version in the stored results. Release history: `CHANGELOG.md`
 
 * Stata 17 or later. Tested with Stata 17 and Stata 18 (Stata/BE is enough). The Mata libraries are built with Stata 17, the oldest tested version, because a library built by a newer Stata is ignored by older ones; Stata 16 and older have not been tested and are not expected to work.
 * The core nwcommands package (see above), including its Mata library `lnwcommands.mlib`.
+
+## Speed
+
+`nwrem` runs in Mata (no compiled plugin). Timed against `relevent::rem.dyad()` 1.2-1 (ordinal likelihood, covariance matrix computed by both) on simulated event streams of 200 to 20,000 events and 20 to 100 actors (Apple M5 Pro, Stata 17, R 4.6, 26 October 2026): the time of relevent divided by the time of `nwrem` ranged from 0.75 to 36. `nwrem` is faster with degree, covariate and inertia effects (1.3 to 36 times, except 0.92 for the two-effect model at 200 events) and slightly slower with the recency effects `rsndsnd rrecsnd` up to 1,000 events (0.75 to 0.9). The coefficients agree to about three significant digits. Details and caveats are in `help nwrem`; the timing scripts are in `dev/speed/`.
 
 ## Tests
 
