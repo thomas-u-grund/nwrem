@@ -178,6 +178,11 @@ reliably improves on the no-effect baseline even when a single point estimate is
 interpret standard errors accordingly and prefer larger event counts where possible.
 
 
+{pstd}
+If the Mata library of nwrem (lnwrem.mlib) does not load in your Stata (for example r(3499) because it was built by a newer Stata than yours), build it with your own Stata:
+{cmd:nwinstall, buildmata(nwrem)} fetches the Mata source, compiles it and installs the library; restart Stata afterwards.
+The build clears the data and the Mata objects in memory. See {help nwinstall##buildmata:nwinstall}.
+
 {title:Stored results}
 
 	Scalars

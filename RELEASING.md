@@ -21,6 +21,7 @@ Two rules from there that are easy to miss: push the release tag by name (`git p
 
 `lib/build.do` builds `lib/lnwrem.mlib` from `unw_rem.do`; it does not load the core and the sources do not mention `nw_def` (verified 2026-10-25). The package still carries `lib/core_mlib.sha256` and `check_version.py` fails when it differs from `$NWCORE/lib/lnwcommands.mlib`.
 In a lockstep batch (master C3): rebuild with Stata 17 (`<Stata 17> -e do lib/build.do` from the repository root), `NWCORE=/path/to/nwcommands python3 tools/record_core_lib.py`, test, patch release. Whether a record-only update is enough is an open decision (master B.5).
+- `nwinstall, buildmata(nwrem)` (core `nwinstall_buildmata.ado`) rebuilds lnwrem.mlib on the user's computer from `unw_rem.do` on `main`. A new or renamed Mata source file or library of this package must be added to `nwinstall_buildmata_tab` in the core (see its GOTCHA.md), and the `mata mlib add` patterns there must match `lib/build.do`.
 
 ## Tests
 

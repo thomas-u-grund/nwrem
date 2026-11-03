@@ -3,6 +3,11 @@
 All notable changes to nwrem are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- Documentation of `nwinstall, buildmata(nwrem)` (nwcommands 3.14 and later): a Mata library that does not load in the user's Stata (built by a newer Stata, r(3499)) is rebuilt from the source in this repository with the Stata that runs. README and help file describe it. No change of the Mata library, the plugin or the estimators.
+
 ## [1.0.10] - 2026-10-26
 
 Patch release. Works with nwcommands 3.6.0 and later; no change of the Mata library.

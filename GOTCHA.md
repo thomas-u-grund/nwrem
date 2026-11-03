@@ -64,3 +64,7 @@ by hand "fixes" it for that session only, which hid the bug in every manual test
 - Reproduce: `SMOKE_STALE=1 tools/smoke_fresh_install.sh <core> <models>` in the core repo builds exactly this state (the session's Mata
   index is made while only the core library is visible). Without `SMOKE_STALE` a plain new session usually finds all libraries,
   which is why a simple "install, restart, run" test passes.
+
+## `nwinstall, buildmata(nwrem)` compiles the source files listed in the core (2026-11-03)
+
+The user-side rebuild of lnwrem.mlib lives in the core (`nwinstall_buildmata.ado`, table `nwinstall_buildmata_tab`): it lists the source files of this package, the library names and the `mata mlib add` patterns copied from `lib/build.do`. If this package gets a new Mata source file (as nwsaom did with `unw_saom_struct.do`, included by `unw_saom.do`) or another library, the table must change, or the rebuild fails with "file ... not found" (r(601)) or leaves functions out. The sources fetched are those on `main`.
