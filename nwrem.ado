@@ -1,4 +1,4 @@
-*! version 1.0.10  26oct2026 nwrem
+*! version 1.0.11  11nov2026 nwrem
 * Copyright (C) 2026 Thomas U. Grund
 * This file is part of nwrem, a Stata package derived from the R package 'relevent' (Carter T. Butts; GPL (>= 2)).
 * nwrem is free software: you can redistribute it and/or modify it under the terms of the GNU General
@@ -20,7 +20,7 @@ program nwrem, eclass
 	_nwsyntax `netname', max(1)
 
 	if "`istemporal'" != "true" | "`temporaltype'" != "event" {
-		di as error "nwrem requires a network declared via nwset's eventtime() option (an event-type temporal network) - see {help nwset##temporal:nwset}."
+		di as error "{p 0 0 2}nwrem requires a network declared via nwset's eventtime() option (an event-type temporal network) - see {help nwset##temporal:nwset}.{p_end}"
 		error 198
 	}
 	// Defensive, matching nwergm.ado's/nwsaom.ado's own explicit
@@ -69,7 +69,7 @@ program nwrem, eclass
 		local __nwrem_sep ","
 	}
 	if `__nwrem_nactive' == 0 {
-		di as error "nwrem requires at least one effect: {bf:nodsnd} {bf:nidrec} {bf:nidsnd} {bf:nodrec} {bf:ntdegsnd} {bf:ntdegrec} {bf:frpsndsnd} {bf:frrecsnd} {bf:covsnd()} {bf:covrec()} {bf:covint()} {bf:covevent()} {bf:rsndsnd} {bf:rrecsnd} (see {help nwrem} for what each computes)."
+		di as error "{p 0 0 2}nwrem requires at least one effect: {bf:nodsnd} {bf:nidrec} {bf:nidsnd} {bf:nodrec} {bf:ntdegsnd} {bf:ntdegrec} {bf:frpsndsnd} {bf:frrecsnd} {bf:covsnd()} {bf:covrec()} {bf:covint()} {bf:covevent()} {bf:rsndsnd} {bf:rrecsnd} (see {help nwrem} for what each computes).{p_end}"
 		error 198
 	}
 
@@ -88,12 +88,12 @@ program nwrem, eclass
 		if "``__nwrem_cv''" != "" {
 			capture confirm numeric variable ``__nwrem_cv''
 			if _rc {
-				di as error "``__nwrem_cv'' is not a numeric variable in the current dataset - `__nwrem_cv'() must be a per-actor covariate, one row per node in the same order as `netname''s own actors (see {help nwload}'s {bf:xvars} option to load that dataset first)."
+				di as error "{p 0 0 2}``__nwrem_cv'' is not a numeric variable in the current dataset - `__nwrem_cv'() must be a per-actor covariate, one row per node in the same order as `netname''s own actors (see {help nwload}'s {bf:xvars} option to load that dataset first).{p_end}"
 				error 198
 			}
 			capture assert _N == `nodes'
 			if _rc {
-				di as error "the current dataset has `=_N' observations but `netname' has `nodes' actors - `__nwrem_cv'() requires exactly one row per actor, in actor order (see {help nwload}'s {bf:xvars} option)."
+				di as error "{p 0 0 2}the current dataset has `=_N' observations but `netname' has `nodes' actors - `__nwrem_cv'() requires exactly one row per actor, in actor order (see {help nwload}'s {bf:xvars} option).{p_end}"
 				error 198
 			}
 			mata: `__nwrem_`__nwrem_cv'' = st_data(1::`nodes', "``__nwrem_cv''")'
@@ -114,13 +114,13 @@ program nwrem, eclass
 		// a two-mode covariate network has missing cells between nodes of the same mode (core >= 3.6.0 rule: refused with error 6088)
 		_nw2guard `covevent', cmd(nwrem covevent())
 		if `covevnodes' != `nodes' {
-			di as error "covevent() network `covevent' has `covevnodes' actors but `netname' has `nodes' - covevent() requires the same actors as `netname'."
+			di as error "{p 0 0 2}covevent() network `covevent' has `covevnodes' actors but `netname' has `nodes' - covevent() requires the same actors as `netname'.{p_end}"
 			error 198
 		}
 		mata: `__nwrem_covevmat' = *(`covevnetobj'->get_matrix_mod(1,1))
 		mata: st_local("__nwrem_covmiss", strofreal(missing(`__nwrem_covevmat') - missing(diagonal(`__nwrem_covevmat'))))
 		if `__nwrem_covmiss' > 0 {
-			di as error "covevent() network `covevent' has `__nwrem_covmiss' missing tie values; the covariate must be defined for every ordered pair of actors."
+			di as error "{p 0 0 2}covevent() network `covevent' has `__nwrem_covmiss' missing tie values; the covariate must be defined for every ordered pair of actors.{p_end}"
 			error 416
 		}
 	}
@@ -158,7 +158,7 @@ program nwrem, eclass
 
 	ereturn post `b' `V', obs(`nevents')
 	ereturn local cmd "nwrem"
-	ereturn local version "1.0.10"
+	ereturn local version "1.0.11"
 	ereturn local title "Relational event model (ordinal partial likelihood, MLE)"
 	ereturn local depvar "`netname'"
 	ereturn scalar N = `nevents'
@@ -186,9 +186,9 @@ program nwrem, eclass
 	}
 	ereturn local unidentified "`=trim("`__nwrem_bad'")'"
 	if "`__nwrem_bad'" != "" {
-		di as text "Note: no usable standard error for" as result "`__nwrem_bad'" as text "."
-		di as text "      These effects are not identified: typically an effect is an exact function of others in the model"
-		di as text "      (the total-degree share ntdegsnd is the sum of nodsnd and nidsnd). Its estimate is arbitrary;"
-		di as text "      drop one of the effects."
+		di as text "{p 0 6 2}Note: no usable standard error for" as result "`__nwrem_bad'" as text ".{p_end}"
+		di as text "{p 6 6 2}These effects are not identified: typically an effect is an exact function of others in the model"   ///
+			" (the total-degree share ntdegsnd is the sum of nodsnd and nidsnd). Its estimate is arbitrary;"   ///
+			" drop one of the effects.{p_end}"
 	}
 end
