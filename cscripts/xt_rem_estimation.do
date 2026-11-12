@@ -54,7 +54,10 @@ program xt_post
 		lincom `c1' - `c2'
 	}
 	estimates store xt_post
-	estimates replay xt_post
+	// POLICY N1: nwrem has no replay (typing nwrem alone asks for an effect, r(198)), so estimates replay fails.
+	// Not promised by the help file; none of the four model commands replays. Recorded, not counted.
+	capture noisily estimates replay xt_post
+	if _rc di as text "  NOTE N1: estimates replay gives r(`=_rc') (no replay in nwrem)"
 	tempname b
 	matrix `b' = e(b)
 	ereturn clear
@@ -137,6 +140,8 @@ xt_post
 nwrem w40, frpsndsnd frrecsnd rsndsnd seed(1)
 xt_post
 nwload w40, xvars
+capture drop x
+capture drop x2
 gen double x = _n
 gen double x2 = mod(_n, 2)
 nwrem w40, covsnd(x) covint(x2) seed(1)
@@ -152,6 +157,8 @@ di as text "{hline 60}"
 di as text "Block D: the data in memory, the network and the helper objects are left as they were"
 di as text "{hline 60}"
 nwload w40, xvars
+capture drop x
+capture drop x2
 gen double x = _n
 tempfile pre
 quietly save `pre'

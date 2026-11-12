@@ -152,7 +152,15 @@ matrix XCE = (0,1,0,2 \ 1,0,3,0 \ 0,3,0,1 \ 2,0,1,0)
 nwset, mat(XCE) directed name(ce) nooutput
 nwrem w40, covevent(ce) seed(1)
 xt_rref "covevent(ce)" -90.14109494 -0.7880309 .2123185
-* TODO-R (not asserted): nidsnd, ntdegsnd, ntdegrec on W40; R code in xt_NOTES.md (rem.dyad(el, 4, effects=c("NIDSnd")...))
+* relevent 1.2-1 references (rem.dyad, ordinal=TRUE, hessian=TRUE; relevent names NIDSnd, NTDegSnd, NTDegRec, NODRec)
+nwrem w40, nidsnd seed(1)
+xt_rref "nidsnd" -98.73601876 -1.173541 1.121908
+nwrem w40, ntdegsnd seed(1)
+xt_rref "ntdegsnd" -99.39578613 0.05213994 1.683404
+nwrem w40, ntdegrec seed(1)
+xt_rref "ntdegrec" -99.10655895 1.307258 1.754899
+nwrem w40, nidsnd nodrec seed(1)
+xt_rref "nidsnd nodrec" -98.61137981 -1.0986151 1.128497 -0.4804567 0.9953229
 
 * ---------------------------------------------------------------------------------------------------------------------
 di as text "{hline 60}"

@@ -39,6 +39,7 @@ scalar XLL = e(ll)
 
 * ---------------------------------------------------------------------------------------------------------------------
 di as text "{hline 60}"
+* CONFIRMED BUG S1 (triage: ids of 8+ digits, i.e. >= 10,000,000, already fail; %9.0g prints 1.00e+07)
 di as text "S1: numeric actor ids above 16,777,216 (not exact in float): 20000001, 20000003, ..."
 di as text "{hline 60}"
 * core nwset.ado:285-286 labels events "n" + strofreal(id) (format %9.0g) while nwfromedge builds the node names
@@ -62,6 +63,7 @@ else di as text "  PASS: S1"
 
 * ---------------------------------------------------------------------------------------------------------------------
 di as text "{hline 60}"
+* CONFIRMED BUG S2 (same cause as S1)
 di as text "S2: numeric actor ids 1e9, 2e9, 3e9, 4e9 (exact in float, but %9.0g prints 1.000e+09)"
 di as text "{hline 60}"
 capture noisily {
@@ -84,6 +86,7 @@ else di as text "  PASS: S2"
 
 * ---------------------------------------------------------------------------------------------------------------------
 di as text "{hline 60}"
+* CONFIRMED BUG S3
 di as text "S3: an event row with a missing sender"
 di as text "{hline 60}"
 * nwfromedge drops the missing id from the actors; build_eventlist gives the event actor index 0 (label "n." not
@@ -109,6 +112,7 @@ else di as text "  PASS: S3"
 
 * ---------------------------------------------------------------------------------------------------------------------
 di as text "{hline 60}"
+* CONFIRMED BUG S4
 di as text "S4: an event row with a missing time"
 di as text "{hline 60}"
 * nwset stores the missing time; RemState sorts missing last, so the event silently becomes the LAST event.
@@ -131,6 +135,7 @@ else di as text "  PASS: S4"
 
 * ---------------------------------------------------------------------------------------------------------------------
 di as text "{hline 60}"
+* DECIDED S5 (owner 2026-11-12): keep relevent behaviour (fit as directed), document it in the help; check kept as a reminder
 di as text "S5 (DESIGN): an undirected event network"
 di as text "{hline 60}"
 * nwrem never looks at `directed'; the ordinal likelihood runs over ordered pairs. nwdynam refuses undirected
@@ -151,6 +156,8 @@ else di as text "  PASS: S5"
 
 * ---------------------------------------------------------------------------------------------------------------------
 di as text "{hline 60}"
+* CONFIRMED BUG S6 (refused, but as r(111) after 32 "initial values not feasible" lines and "simplex delta required";
+* wanted: a clean refusal like covevent(), r(416))
 di as text "S6: covsnd() with a missing value"
 di as text "{hline 60}"
 * covevent() refuses missing values (r(416), nwrem.ado:115-118); covsnd/covrec/covint are read with st_data and never
@@ -163,8 +170,7 @@ capture noisily {
 	gen double x = _n
 	replace x = . in 2
 	capture noisily nwrem wcm, covsnd(x) seed(1)
-	assert _rc != 0
-	assert _rc < 3000 | _rc > 3999
+	assert _rc == 416
 }
 if _rc {
 	local ++fails
@@ -175,6 +181,7 @@ else di as text "  PASS: S6"
 
 * ---------------------------------------------------------------------------------------------------------------------
 di as text "{hline 60}"
+* CONFIRMED BUG S7 (r(198) "covsnd_<name> invalid name" for any name longer than 25 characters)
 di as text "S7: covariate with a 32-character name (column name covsnd_<name> has 39 characters)"
 di as text "{hline 60}"
 * closed form for x01 = (0,0,1,1): theta = -0.302280871873 (xt_rem_closedform.do)
@@ -203,6 +210,7 @@ else di as text "  PASS: S7"
 
 * ---------------------------------------------------------------------------------------------------------------------
 di as text "{hline 60}"
+* CONFIRMED BUG S8 (minor: seed(-1) is silently unseeded)
 di as text "S8: seed(-1) is the internal 'not given' value"
 di as text "{hline 60}"
 * nwrem.ado:15 SEED(integer -1), line 131: -1 means 'no seed'. seed(-1) is either refused or (help: 'the seed makes the
@@ -230,6 +238,7 @@ else di as text "  PASS: S8"
 
 * ---------------------------------------------------------------------------------------------------------------------
 di as text "{hline 60}"
+* CONFIRMED BUG S9 (owner 2026-11-12: covariates must be matched via _nwnode when present, not by row)
 di as text "S9 (DESIGN): covariate dataset not in actor order although _nwnode is there"
 di as text "{hline 60}"
 * the covariate is read by row position (help: 'one row per actor, in actor order'). After nwload, xvars the data
@@ -253,6 +262,30 @@ if _rc {
 else di as text "  PASS: S9"
 
 * ---------------------------------------------------------------------------------------------------------------------
+* CONFIRMED BUG N2 (found in triage): a self-loop event is refused in RemState::init (unw_rem.do:79) with a message of
+* about 130 characters; Mata _error(errtxt) fails on texts over ~110 characters with r(3300) "argument out of range"
+* and the message is lost. Wanted: r(3498) with the self-loop message.
+di as text "{hline 60}"
+di as text "N2: self-loop event gives r(3498) with its message"
+di as text "{hline 60}"
+capture noisily {
+	nwclear
+	clear
+	quietly set obs 4
+	gen long sender = cond(_n == 3, 3, _n)
+	gen long receiver = cond(_n == 3, 3, mod(_n, 3) + 1)
+	gen double t = _n
+	nwset sender receiver, eventtime(t) directed name(wloop)
+	capture noisily nwrem wloop, nodsnd seed(1)
+	assert _rc == 3498
+}
+if _rc {
+	local ++fails
+	local failed "`failed' N2"
+	di as error "  FAIL N2: self-loop refusal loses its message (r(3300))"
+}
+else di as text "  PASS: N2"
+
 if `fails' > 0 {
 	di as error "suspected problems confirmed: `failed'"
 	exit 9
