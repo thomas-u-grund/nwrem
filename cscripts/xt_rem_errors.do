@@ -10,7 +10,8 @@ cscript
 *   111  covsnd() names a variable that does not exist (syntax)
 *   103  covsnd() with two variables (syntax varname)
 *   416  covevent() network with missing tie values (115-118)
-*   482  network or covevent() network not found (_nwsyntax); also two networks given (max(1))
+*   482  network or covevent() network not found (_nwsyntax)
+*   198  two networks given where one is allowed (_nwsyntax max(1): "too many networks")
 *   2001 fewer than 2 events (139-142)
 *   3498 self-loop event (Mata _error in RemState::init, unw_rem.do:78-82)
 *   6088 covevent() names a two-mode network (_nw2guard)
@@ -114,7 +115,7 @@ xt_err 198 nwrem w40, nod
 xt_err 198 nwrem static, nodsnd
 xt_err 198 nwrem tm, nodsnd
 xt_err 482 nwrem nosuchnet, nodsnd
-xt_err 482 nwrem w40 static, nodsnd
+xt_err 198 nwrem w40 static, nodsnd
 
 * ---------------------------------------------------------------------------------------------------------------------
 di as text "{hline 60}"

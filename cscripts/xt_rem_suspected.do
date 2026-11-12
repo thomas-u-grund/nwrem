@@ -88,7 +88,7 @@ else di as text "  PASS: S2"
 
 * ---------------------------------------------------------------------------------------------------------------------
 di as text "{hline 60}"
-* CONFIRMED BUG S3
+* CONFIRMED BUG S3 (FIXED in the core: nwset refuses the event)
 di as text "S3: an event row with a missing sender"
 di as text "{hline 60}"
 * nwfromedge drops the missing id from the actors; build_eventlist gives the event actor index 0 (label "n." not
@@ -99,11 +99,9 @@ capture noisily {
 	set obs 41
 	replace receiver = 2 in 41
 	replace t = 41 in 41
-	nwset sender receiver, eventtime(t) directed name(wmis)
-	capture noisily nwrem wmis, nodsnd nidrec seed(1)
-	local rc = _rc
-	if `rc' == 0 assert e(N) == 40
-	else assert `rc' < 3000 | `rc' > 3999
+	* the core now refuses the event at nwset (r(416), a message, nothing created)
+	capture noisily nwset sender receiver, eventtime(t) directed name(wmis)
+	assert _rc == 416
 }
 if _rc {
 	local ++fails
@@ -114,7 +112,7 @@ else di as text "  PASS: S3"
 
 * ---------------------------------------------------------------------------------------------------------------------
 di as text "{hline 60}"
-* CONFIRMED BUG S4
+* CONFIRMED BUG S4 (FIXED in the core: nwset refuses the event)
 di as text "S4: an event row with a missing time"
 di as text "{hline 60}"
 * nwset stores the missing time; RemState sorts missing last, so the event silently becomes the LAST event.
@@ -122,11 +120,9 @@ capture noisily {
 	nwclear
 	xt_w40
 	replace t = . in 10
-	nwset sender receiver, eventtime(t) directed name(wmt)
-	capture noisily nwrem wmt, nodsnd nidrec seed(1)
-	local rc = _rc
-	if `rc' == 0 assert e(N) == 39
-	else assert `rc' < 3000 | `rc' > 3999
+	* the core now refuses the event at nwset (r(416), a message, nothing created)
+	capture noisily nwset sender receiver, eventtime(t) directed name(wmt)
+	assert _rc == 416
 }
 if _rc {
 	local ++fails
