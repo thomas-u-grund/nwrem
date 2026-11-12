@@ -114,8 +114,8 @@ at their own convergence tolerance. Timings depend on the machine, the data and 
 deliberately no intercept option - a term constant across every candidate pair at a given event
 cancels out exactly in the ordinal likelihood's own normalization (the same reason Cox
 proportional-hazards models have no identifiable baseline intercept), so one is never estimable
-here regardless of what is requested. Effects not yet implemented (triadic/shared-partner effects,
-fixed effects, the full non-ordinal/waiting-time likelihood, Bayesian estimation) are not implemented.
+here regardless of what is requested. Not implemented: triadic/shared-partner effects,
+fixed effects, the full non-ordinal/waiting-time likelihood and Bayesian estimation.
 
 {pstd}
 {bf:rsndsnd}/{bf:rrecsnd} are different from {bf:frpsndsnd}/{bf:frrecsnd}: the latter measure HOW
