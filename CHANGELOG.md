@@ -3,6 +3,11 @@
 All notable changes to nwrem are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+- The note after a fit with effects that have no usable standard error said that the total-degree share `ntdegsnd` is the sum of `nodsnd` and `nidsnd`; it is half the sum (the average of the two shares, as in relevent's `NTDegSnd`). The statistic itself is unchanged.
+
 ## [1.0.12] - 2026-11-12
 
 ### Fixed

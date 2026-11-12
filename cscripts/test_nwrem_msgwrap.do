@@ -70,13 +70,13 @@ log close mw1
 assert `rc' == 198
 _mw_check `l1' "nwrem requires a network declared via nwset's eventtime() option (an event-type temporal network) - see nwset."
 
-* 2. note: effects that are not identified (ntdegsnd = nodsnd + nidsnd)
+* 2. note: effects that are not identified (ntdegsnd = (nodsnd + nidsnd)/2)
 nwclear
 nwwebuse socialevolution, nwclear
 nwset sender receiver, eventtime(t) directed name(ev)
 log using `l2', text replace name(mw2)
 nwrem ev, nodsnd nidsnd ntdegsnd seed(1)
 log close mw2
-_mw_check `l2' "These effects are not identified: typically an effect is an exact function of others in the model (the total-degree share ntdegsnd is the sum of nodsnd and nidsnd). Its estimate is arbitrary; drop one of the effects."
+_mw_check `l2' "These effects are not identified: typically an effect is an exact function of others in the model (the total-degree share ntdegsnd is half the sum of nodsnd and nidsnd). Its estimate is arbitrary; drop one of the effects."
 
 di as result "ALL TESTS PASSED"

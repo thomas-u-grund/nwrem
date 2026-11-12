@@ -1,7 +1,7 @@
 cscript
 
 * Regression test: nwrem with ntdegsnd together with nodsnd and nidsnd. The three shares are exactly collinear
-* (total-degree share = out-degree share + in-degree share); the fit returned a missing standard error for
+* (total-degree share = half the sum of the out-degree share and the in-degree share); the fit returned a missing standard error for
 * ntdegsnd and no warning. It now prints a note and returns the effect in e(unidentified).
 
 local nwcore : env NWCORE

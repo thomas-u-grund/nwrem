@@ -172,7 +172,7 @@ program nwrem, eclass
 	di as text "{hline 60}"
 	ereturn display
 	// effects without a usable standard error: exactly collinear with other effects in the model (for example the
-	// total-degree share ntdegsnd together with nodsnd and nidsnd), or not identified by the data
+	// total-degree share ntdegsnd = (nodsnd + nidsnd)/2), or not identified by the data
 	local __nwrem_bad ""
 	local __nwrem_k = colsof(e(b))
 	forvalues __nwrem_j = 1/`__nwrem_k' {
@@ -188,7 +188,7 @@ program nwrem, eclass
 	if "`__nwrem_bad'" != "" {
 		di as text "{p 0 6 2}Note: no usable standard error for" as result "`__nwrem_bad'" as text ".{p_end}"
 		di as text "{p 6 6 2}These effects are not identified: typically an effect is an exact function of others in the model"   ///
-			" (the total-degree share ntdegsnd is the sum of nodsnd and nidsnd). Its estimate is arbitrary;"   ///
+			" (the total-degree share ntdegsnd is half the sum of nodsnd and nidsnd). Its estimate is arbitrary;"   ///
 			" drop one of the effects.{p_end}"
 	}
 end
