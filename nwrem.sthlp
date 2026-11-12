@@ -48,10 +48,10 @@
 {synopt:{opt frpsndsnd}}"inertia": the fraction of the sender's own past sends that went specifically to this receiver affects the sending rate to that receiver{p_end}
 {synopt:{opt frrecsnd}}"reciprocity of receipt": the fraction of the sender's own past receipts that came specifically from this receiver affects the sending rate to that receiver{p_end}
 {syntab:Covariate effects}
-{synopt:{opth covsnd(varname)}}a per-actor covariate affects the sending rate (an "ego" effect - {it:varname} is read from the CURRENT dataset, one row per actor,
+{synopt:{opth covsnd(varname)}}a numeric per-actor covariate affects the sending rate (an "ego" effect - {it:varname} is read from the CURRENT dataset, one row per actor,
 matched to the actors by their node labels - see {help nwload}'s {opt xvars} option below){p_end}
-{synopt:{opth covrec(varname)}}a per-actor covariate affects the receiving rate (an "alter" effect){p_end}
-{synopt:{opth covint(varname)}}a per-actor covariate affects both the sending and the receiving rate together (the same variable, one shared coefficient){p_end}
+{synopt:{opth covrec(varname)}}a numeric per-actor covariate affects the receiving rate (an "alter" effect){p_end}
+{synopt:{opth covint(varname)}}a numeric per-actor covariate affects both the sending and the receiving rate together (the same variable, one shared coefficient){p_end}
 {synopt:{opth covevent(netname)}}a pairwise (dyad-level) covariate affects the rate of the event from sender to receiver directly - {it:netname} must already be a loaded network with the SAME actors
 as the event network, one value per ordered (sender,receiver) pair (read from its own tie values, exactly like {help nwergm}'s {opt edgecov()}); a two-mode network is refused (error 6088) and so is a
 network with missing tie values{p_end}
