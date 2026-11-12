@@ -3,6 +3,15 @@
 All notable changes to nwrem are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project uses [Semantic Versioning](https://semver.org/).
 
+## [1.0.12] - 2026-11-12
+
+### Fixed
+- **Help file checked against the code.** `seed()` makes the fit reproducible (all starting values are random); stored results completed.
+- **Help file layout.** Stored results wrap at the window width; very long source lines are broken up.
+- The help file lists the effects that are not implemented in plain words.
+
+Results do not change.
+
 ## [1.0.11] - 2026-11-11
 
 Patch release. No change of the Mata library or the estimators.

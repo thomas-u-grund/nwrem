@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.0.11  11nov2026 author: Thomas Grund}{...}
+{* *! version 1.0.12  12nov2026 author: Thomas Grund}{...}
 {marker topic}
 {helpb nwtopical##analysis_dynamicmodels:[NW-2.6.8] Dynamic & Event-Based Models}
 
@@ -47,29 +47,26 @@
 {synopt:{opt frpsndsnd}}"inertia": the fraction of the sender's own past sends that went specifically to this receiver affects the sending rate to that receiver{p_end}
 {synopt:{opt frrecsnd}}"reciprocity of receipt": the fraction of the sender's own past receipts that came specifically from this receiver affects the sending rate to that receiver{p_end}
 {syntab:Covariate effects}
-{synopt:{opth covsnd(varname)}}a per-actor covariate affects the sending rate (an "ego" effect - {it:varname} is read from the CURRENT dataset, one row per actor, in {it:netname}'s own actor order - see {help nwload}'s {opt xvars} option below){p_end}
+{synopt:{opth covsnd(varname)}}a per-actor covariate affects the sending rate (an "ego" effect - {it:varname} is read from the CURRENT dataset, one row per actor, in {it:netname}'s own actor order -
+see {help nwload}'s {opt xvars} option below){p_end}
 {synopt:{opth covrec(varname)}}a per-actor covariate affects the receiving rate (an "alter" effect){p_end}
 {synopt:{opth covint(varname)}}a per-actor covariate affects both the sending and the receiving rate together (the same variable, one shared coefficient){p_end}
-{synopt:{opth covevent(netname)}}a pairwise (dyad-level) covariate affects the rate of the event from sender to receiver directly - {it:netname} must already be a loaded network with the SAME actors as the event network, one value per ordered (sender,receiver) pair (read from its own tie values, exactly like {help nwergm}'s {opt edgecov()}); a two-mode network is refused (error 6088) and so is a network with missing tie values{p_end}
+{synopt:{opth covevent(netname)}}a pairwise (dyad-level) covariate affects the rate of the event from sender to receiver directly - {it:netname} must already be a loaded network with the SAME actors
+as the event network, one value per ordered (sender,receiver) pair (read from its own tie values, exactly like {help nwergm}'s {opt edgecov()}); a two-mode network is refused (error 6088) and so is a
+network with missing tie values{p_end}
 {syntab:Recency effects}
-{synopt:{opt rsndsnd}}"recency of sending": how RECENTLY (not how often) the sender previously sent to this receiver affects the sending rate to that receiver again (1/rank among the sender's own past receivers, most recent = rank 1; 0 if never sent to before){p_end}
-{synopt:{opt rrecsnd}}"recency of receipt": how RECENTLY (not how often) the sender previously received from this receiver affects the sending rate back to that receiver (1/rank among the sender's own past senders, most recent = rank 1; 0 if never received from before) - a recency-based reciprocity effect{p_end}
+{synopt:{opt rsndsnd}}"recency of sending": how RECENTLY (not how often) the sender previously sent to this receiver affects the sending rate to that receiver again (1/rank among the sender's own past
+receivers, most recent = rank 1; 0 if never sent to before){p_end}
+{synopt:{opt rrecsnd}}"recency of receipt": how RECENTLY (not how often) the sender previously received from this receiver affects the sending rate back to that receiver (1/rank among the sender's own
+past senders, most recent = rank 1; 0 if never received from before) - a recency-based reciprocity effect{p_end}
 {syntab:}
-{synopt:{opt seed(#)}}set the random-number seed before estimation (affects only which of several internal optimizer restarts is tried first when the default starting point fails to converge - never affects the reported MLE once a fit succeeds){p_end}
+{synopt:{opt seed(#)}}set the random-number seed before estimation; the optimizer starts from small random values near zero (and retries from
+other random values if a start fails), so the seed makes the fit reproducible; different seeds give the same MLE up to the convergence tolerance,
+except along the flat likelihood ridges described in the note on precision below{p_end}
 {synoptline}
 {p2colreset}{...}
 {pstd}At least one effect must be specified.{p_end}
 
-
-{title:Version}
-
-{p 8 17 2}
-{cmd:nwrem version}
-{p_end}
-
-{pstd}
-{cmd:nwrem version} displays the installed release of {cmd:nwrem}, the version of the {cmd:nwcommands} core, the license and the version of the R package that the results were compared with. It stores the release in {cmd:r(version)} and {cmd:r(date)}, the core version in {cmd:r(core)}, and the license in {cmd:r(license)}. After estimation, the release that produced the results is in {cmd:e(version)}; quote it when reporting an analysis. {cmd:nwversion} lists the core and all installed model packages.
-{p_end}
 
 {title:Description}
 
@@ -183,23 +180,6 @@ If the Mata library of nwrem (lnwrem.mlib) does not load in your Stata (for exam
 {cmd:nwinstall, buildmata(nwrem)} fetches the Mata source, compiles it and installs the library; restart Stata afterwards.
 The build clears the data and the Mata objects in memory. See {help nwinstall##buildmata:nwinstall}.
 
-{title:Stored results}
-
-	Scalars
-	  {bf:e(N)}		number of events
-	  {bf:e(nodes)}		number of actors
-	  {bf:e(ll)}		log likelihood at the MLE
-
-	Macros
-	  {bf:e(cmd)}		{bf:nwrem}
-	  {bf:e(title)}		"Relational event model (ordinal partial likelihood, MLE)"
-	  {bf:e(depvar)}	name of the event network fit
-	  {bf:e(unidentified)}	effects without a usable standard error (collinear with others, or a standard error above 100); empty when all are identified
-
-	Matrices
-	  {bf:e(b)}		coefficient vector
-	  {bf:e(V)}		variance-covariance matrix (observed information)
-
 
 {title:Examples}
 
@@ -258,9 +238,43 @@ regardless of how often (contrast with {cmd:frpsndsnd} above, which is about fre
 	{cmd:. nwrem chat, nodsnd rsndsnd}
 
 
+{title:Stored results}
+
+{synoptset 20 tabbed}{...}
+{p2col 5 20 24 2: Scalars}{p_end}
+{synopt:{bf:e(N)}}number of events{p_end}
+{synopt:{bf:e(nodes)}}number of actors{p_end}
+{synopt:{bf:e(ll)}}log likelihood at the MLE{p_end}
+
+{p2col 5 20 24 2: Macros}{p_end}
+{synopt:{bf:e(cmd)}}{bf:nwrem}{p_end}
+{synopt:{bf:e(version)}}release of {cmd:nwrem} that produced the results{p_end}
+{synopt:{bf:e(title)}}"Relational event model (ordinal partial likelihood, MLE)"{p_end}
+{synopt:{bf:e(depvar)}}name of the event network fit{p_end}
+{synopt:{bf:e(unidentified)}}effects without a usable standard error (collinear with others, or a standard error above 100); empty when all are identified{p_end}
+
+{p2col 5 20 24 2: Matrices}{p_end}
+{synopt:{bf:e(b)}}coefficient vector{p_end}
+{synopt:{bf:e(V)}}variance-covariance matrix (observed information){p_end}
+
+
+{title:Version}
+
+{p 8 17 2}
+{cmd:nwrem version}
+{p_end}
+
+{pstd}
+{cmd:nwrem version} displays the installed release of {cmd:nwrem}, the version of the {cmd:nwcommands} core, the license and the version of the R package that the results were compared with. It stores
+the release in {cmd:r(version)} and {cmd:r(date)}, the core version in {cmd:r(core)}, the native plugin in {cmd:r(plugin)} (none: {cmd:nwrem} runs in Mata),
+the R package it was compared with in {cmd:r(reference)}, and the license in {cmd:r(license)}. After estimation, the release that produced the results is in
+{cmd:e(version)}; quote it when reporting an analysis. {cmd:nwversion} lists the core and all installed model packages.
+{p_end}
+
+
 {title:Also see}
 
 {p 4 14 2}Help: {help nwset}, {help nwattime}, {help nwergm}, {help nwsaom}{p_end}
 
 {hline}
-{pstd}{it:nwrem version 1.0.11, 11 November 2026}{p_end}{* nwversion}
+{pstd}{it:nwrem version 1.0.12, 12 November 2026}{p_end}{* nwversion}
