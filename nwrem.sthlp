@@ -30,7 +30,8 @@
 {opth covevent(netname)}
 {opt rsndsnd}
 {opt rrecsnd}
-{opt seed(#)}]
+{opt seed(#)}
+{opt level(#)}]
 
 
 {synoptset 20 tabbed}{...}
@@ -47,8 +48,8 @@
 {synopt:{opt frpsndsnd}}"inertia": the fraction of the sender's own past sends that went specifically to this receiver affects the sending rate to that receiver{p_end}
 {synopt:{opt frrecsnd}}"reciprocity of receipt": the fraction of the sender's own past receipts that came specifically from this receiver affects the sending rate to that receiver{p_end}
 {syntab:Covariate effects}
-{synopt:{opth covsnd(varname)}}a per-actor covariate affects the sending rate (an "ego" effect - {it:varname} is read from the CURRENT dataset, one row per actor, in {it:netname}'s own actor order -
-see {help nwload}'s {opt xvars} option below){p_end}
+{synopt:{opth covsnd(varname)}}a per-actor covariate affects the sending rate (an "ego" effect - {it:varname} is read from the CURRENT dataset, one row per actor,
+matched to the actors by their node labels - see {help nwload}'s {opt xvars} option below){p_end}
 {synopt:{opth covrec(varname)}}a per-actor covariate affects the receiving rate (an "alter" effect){p_end}
 {synopt:{opth covint(varname)}}a per-actor covariate affects both the sending and the receiving rate together (the same variable, one shared coefficient){p_end}
 {synopt:{opth covevent(netname)}}a pairwise (dyad-level) covariate affects the rate of the event from sender to receiver directly - {it:netname} must already be a loaded network with the SAME actors
@@ -62,10 +63,12 @@ past senders, most recent = rank 1; 0 if never received from before) - a recency
 {syntab:}
 {synopt:{opt seed(#)}}set the random-number seed before estimation; the optimizer starts from small random values near zero (and retries from
 other random values if a start fails), so the seed makes the fit reproducible; different seeds give the same MLE up to the convergence tolerance,
-except along the flat likelihood ridges described in the note on precision below{p_end}
+except along the flat likelihood ridges described in the note on precision below; {it:#} is an integer between 0 and 2147483647{p_end}
+{synopt:{opt level(#)}}confidence level of the displayed intervals; default {cmd:level(95)}{p_end}
 {synoptline}
 {p2colreset}{...}
-{pstd}At least one effect must be specified.{p_end}
+{pstd}At least one effect must be specified. Typed without arguments (or with {opt level()} only),
+{cmd:nwrem} redisplays the results of the last {cmd:nwrem} fit; {cmd:estimates replay} works as well.{p_end}
 
 
 {title:Description}
@@ -107,6 +110,18 @@ significant digits (largest absolute difference 5e-3 for coefficients of about 2
 at their own convergence tolerance. Timings depend on the machine, the data and the effects.
 
 {pstd}
+{bf:Direction}: the model is always fitted for directed events, the first variable of {help nwset}
+being the sender and the second the receiver, and the risk set holds all {it:n}({it:n}-1) ordered
+pairs. A network declared {opt undirected} is fitted in the same way and gives the same results as
+the directed declaration; this follows {cmd:relevent::rem.dyad()}, which has no undirected variant.
+
+{pstd}
+{bf:Event data}: every event must have a time, a sender and a receiver that are actors of the
+network, and a sender different from the receiver. Events without a time or with a missing actor
+are refused (error 416), and so are self-loops (error 3498); drop such rows before {help nwset}.
+Two-mode event networks are refused (error 198).
+
+{pstd}
 {cmd:nwrem} fits any combination of the 14 effects above (at least one required). There is
 deliberately no intercept option - a term constant across every candidate pair at a given event
 cancels out exactly in the ordinal likelihood's own normalization (the same reason Cox
@@ -123,18 +138,21 @@ partner once, very recently, scores as high on {bf:rsndsnd} for that partner as 
 them constantly and most recently - only the ordering matters, not the count.
 
 {pstd}
-{bf:Covariate effects} require the current Stata dataset, at the time {cmd:nwrem} is called, to
-have exactly one row per actor in {it:netname}'s own actor order - NOT the event-level dataset
-{it:netname} itself was declared from. Use {help nwload}'s {opt xvars} option first to load that
-per-node dataset:
+{bf:Covariate effects} are read from the current Stata dataset at the time {cmd:nwrem} is called - NOT
+the event-level dataset {it:netname} itself was declared from. When the dataset has the node-label
+variable {bf:_nwnode} (as after {help nwload}'s {opt xvars} option), each actor of {it:netname} is
+matched to its row by label, whatever the sort order of the data; every actor must have exactly
+one row. Without {bf:_nwnode} the dataset must have exactly one row per actor, in {it:netname}'s
+own actor order. A missing covariate value is refused (error 416). Use {help nwload}'s {opt xvars}
+option first to load the per-node dataset:
 
 	{cmd:. nwload mynet, xvars}
 	{cmd:. gen seniority = ...}
 	{cmd:. nwrem mynet, nodsnd covsnd(seniority)}
 
 {pstd}
-This mirrors {help nwsaom}'s own {opt nodecov()} convention exactly, not a new mechanism specific
-to {cmd:nwrem}.
+The coefficient of a covariate effect is named after the effect and the variable ({bf:covsnd_}{it:varname});
+names longer than 32 characters are cut to 32.
 
 {pstd}
 {bf:covevent()} is different: it is a per-{it:pair} (not per-actor) covariate, so it is read

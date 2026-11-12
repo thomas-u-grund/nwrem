@@ -40,6 +40,7 @@ capture mata: mata drop RemState()
 capture mata: mata drop RemFitUnit1()
 capture mata: mata drop rem_loglik_unit1()
 capture mata: mata drop rem_eval_unit1()
+capture mata: mata drop rem_node_rows()
 
 mata:
 mata set matastrict off
@@ -76,7 +77,9 @@ void RemState::init(real matrix rawevents, real scalar nn) {
 	// the caller necessarily noticing.
 	for (k=1; k<=rows(rawevents); k++) {
 		if (rawevents[k,1] == rawevents[k,2]) {
-			_error("nwrem: event " + strofreal(k) + " has sender == receiver (self-loop); relational event models are defined over i != j dyads only.")
+			// the message goes through errprintf(): _error() fails with r(3300) on texts longer than about 110 characters
+			errprintf("{p 0 0 2}nwrem: event %s has sender == receiver (self-loop); relational event models are defined over i != j dyads only.{p_end}\n", strofreal(k))
+			exit(3498)
 		}
 	}
 
@@ -90,6 +93,28 @@ void RemState::init(real matrix rawevents, real scalar nn) {
 	ord = order((rawevents[.,3], (1::rows(rawevents))), (1, 2))
 	events = rawevents[ord,.]
 	nevents = rows(events)
+}
+
+/*
+	rem_node_rows(): for every node name, its row in the label column lab of the data (0 when absent, -1 when the label
+	occurs more than once). Used by nwrem.ado to match per-actor covariates to the actors by label.
+*/
+real colvector rem_node_rows(string rowvector names, string colvector lab)
+{
+	transmorphic A
+	real colvector pos
+	real scalar k
+
+	A = asarray_create("string", 1)
+	for (k = 1; k <= rows(lab); k++) {
+		if (asarray_contains(A, lab[k])) asarray(A, lab[k], -1)
+		else asarray(A, lab[k], k)
+	}
+	pos = J(cols(names), 1, 0)
+	for (k = 1; k <= cols(names); k++) {
+		if (asarray_contains(A, names[k])) pos[k] = asarray(A, names[k])
+	}
+	return(pos)
 }
 
 void RemState::build_degree_accumulators() {

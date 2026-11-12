@@ -156,16 +156,19 @@ capture noisily nwrem chatlog
 assert _rc == 198
 di as text "  correctly rejected zero-effect call (rc=" _rc ")"
 
-* Two-mode rejection (nwrem.ado's own explicit guard, see its header
-* comment) is NOT exercised here: nwset's own time()/interval()/
-* eventtime() options cannot currently be combined with twomode/
-* bipartite in the same call (the development notes' own tracked
-* composability gap), so no live network can reach is2mode()=="true"
-* while also being an event-type network via the public interface
-* today - the same "genuinely unreachable from outside, not a bug"
-* situation this project's own nwtab2/nwtab3 dispatch guards are in
-* (see cscripts/test_nwtab2.do). Revisit once that composability gap
-* closes.
+* Two-mode rejection: nwset accepts eventtime() together with twomode, and nwrem refuses such a network.
+preserve
+clear
+quietly set obs 4
+gen p = cond(_n <= 2, 1, 2)
+gen o = 10 + _n
+gen t = _n
+nwset p o, twomode eventtime(t) name(tmrem)
+capture noisily nwrem tmrem, nodsnd
+assert _rc == 198
+di as text "  correctly rejected a two-mode event network (rc=" _rc ")"
+nwdrop tmrem
+restore
 
 di as text "{hline 60}"
 di as text "Test: nwrem's covsnd()/covrec()/covint() validate the current dataset"
@@ -174,10 +177,7 @@ di as text "{hline 60}"
 * covsnd() naming a non-numeric (string) variable is rejected - by
 * Stata's own syntax parser (r109, "type mismatch"), not nwrem.ado's
 * own body-level "is not a numeric variable" guard: covsnd() is
-* declared `varname numeric` in the syntax line itself, so a string
-* variable never reaches that later check at all (confirmed directly -
-* that guard is unreachable dead code via the public interface, kept
-* as defense in depth rather than removed).
+* declared `varname numeric` in the syntax line itself.
 nwload chatlog, xvars
 gen strseniority = "a"
 capture noisily nwrem chatlog, nodsnd covsnd(strseniority)

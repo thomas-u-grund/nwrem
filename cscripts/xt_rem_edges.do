@@ -175,12 +175,14 @@ foreach map in "100 + @" "cond(@==1,1,cond(@==2,5,cond(@==3,17,1000)))" "1000000
 	quietly replace receiver = `er'
 	nwset sender receiver, eventtime(t) directed name(wid`k')
 	if `k' == 3 {
-		// CONFIRMED BUG S1: ids of 8 or more digits (here 10000001..) -> nwset labels events with strofreal() %9.0g
-		// ("n1.00e+07"), nwfromedge names nodes with %18.0g: events get actor index 0, raw Mata r(3300) in RemState
+		// CORE BUG S1 (not nwrem): ids of 8 or more digits (here 10000001..) -> core nwset labels events with
+		// strofreal() %9.0g ("n1.00e+07"), nwfromedge names nodes with %18.0g: events get actor index 0. nwrem now
+		// refuses such events cleanly (r(416)); the fit itself waits for the core fix.
 		capture noisily nwrem wid`k', nodsnd nidrec seed(1)
 		if _rc {
-			local xt_known "`xt_known' S1(r(`=_rc'))"
-			di as error "  CONFIRMED BUG S1: ids `map' give r(`=_rc')"
+			assert _rc == 416
+			local xt_known "`xt_known' S1-core(r(`=_rc'))"
+			di as text "  CORE BUG S1: ids `map' give r(`=_rc') (clean refusal; cause in the core)"
 			continue
 		}
 	}
@@ -232,5 +234,5 @@ assert mreldif(e(b), XB3) < 1e-12
 assert reldif(e(ll), scalar(XLL3)) < 1e-12
 di as text "  PASS: duplicated events at one time = the same events at distinct times"
 
-if "`xt_known'" != "" di as error "known confirmed bugs hit:`xt_known'"
+if "`xt_known'" != "" di as text "known core bugs hit (not nwrem):`xt_known'"
 di "ALL PASS (apart from confirmed bugs listed above)"

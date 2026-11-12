@@ -107,6 +107,8 @@ di as text "Block A: options and network arguments"
 di as text "{hline 60}"
 xt_err 198 nwrem w40
 xt_err 198 nwrem w40, seed(1)
+xt_err 198 nwrem w40, nodsnd seed(-1)
+xt_err 198 nwrem w40, nodsnd seed(1.5)
 xt_err 198 nwrem w40, nodsnd foo
 xt_err 198 nwrem w40, nod
 xt_err 198 nwrem static, nodsnd
@@ -143,19 +145,21 @@ xt_err 2001 nwrem one, nodsnd
 xt_err 2001 nwrem one, rsndsnd
 * (covevent(five) on the one-event network stops with 198 first: the covariate checks run before the event count)
 xt_err 198 nwrem one, covevent(five)
-// CONFIRMED BUG N2: the self-loop refusal (unw_rem.do:79) passes a message of more than ~110 characters to Mata
-// _error(errtxt), which then fails itself with r(3300) "argument out of range" and the message is never shown.
-// Wanted: r(3498) with the message. The check below records the bug and goes on.
+// N2 (fixed): the self-loop refusal gives r(3498) with its message (it used to be lost: Mata _error() fails with
+// r(3300) on long texts).
 local xt_known ""
 foreach o in "nodsnd" "frpsndsnd rsndsnd" {
 	capture noisily nwrem loop, `o'
 	if _rc == 3498 di as text "  PASS: r(3498): nwrem loop, `o'"
 	else {
 		local xt_known "`xt_known' N2(r(`=_rc'))"
-		di as error "  CONFIRMED BUG N2: nwrem loop, `o' gives r(`=_rc'), not r(3498) with the self-loop message"
+		di as error "  FAIL N2: nwrem loop, `o' gives r(`=_rc'), not r(3498) with the self-loop message"
 	}
 	assert "`e(cmd)'" == "nwrem"
 }
-if "`xt_known'" != "" di as error "known confirmed bugs hit:`xt_known'"
+if "`xt_known'" != "" {
+	di as error "failed:`xt_known'"
+	exit 9
+}
 
 di "ALL PASS"

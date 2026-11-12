@@ -44,3 +44,10 @@ Counts: CONFIRMED 11 (S1-S4, S6-S9, item 9, item 10, N2), NOT A BUG 0, DECIDED: 
 | xt_rem_options.do | ALL PASS |
 | xt_rem_errors.do | ALL PASS apart from CONFIRMED BUG N2 |
 | xt_rem_suspected.do | ends r(9) by design: S1 S2 S3 S4 S5 S6 S7 S8 S9 N2 fail (S5 = decided: document; check kept until the help says so or the owner drops it) |
+
+## Fixes (2026-11-12, Unreleased)
+
+Fixed in nwrem: S3, S4 (clean refusal r(416)), S5 (help), S6 (r(416)), S7, S8 (seed() 0..2147483647), S9 (match by
+`_nwnode`), item 9 (comment; test_nwrem_ado.do now checks the two-mode refusal), N1 (replay, level()), N2 (errprintf +
+exit(3498)). Core-caused, left for the core: S1, S2 (nwrem now refuses the unmatched events cleanly, r(416); the checks
+record them as CORE BUG), item 10 (_nwsyntax message). All xt_rem_*.do end with ALL PASS under Stata 17.

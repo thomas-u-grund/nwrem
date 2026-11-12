@@ -54,10 +54,13 @@ program xt_post
 		lincom `c1' - `c2'
 	}
 	estimates store xt_post
-	// POLICY N1: nwrem has no replay (typing nwrem alone asks for an effect, r(198)), so estimates replay fails.
-	// Not promised by the help file; none of the four model commands replays. Recorded, not counted.
-	capture noisily estimates replay xt_post
-	if _rc di as text "  NOTE N1: estimates replay gives r(`=_rc') (no replay in nwrem)"
+	// N1 (fixed): estimates replay and nwrem alone (or with level()) redisplay the results without refitting
+	estimates replay xt_post
+	tempname b0
+	matrix `b0' = e(b)
+	nwrem
+	nwrem, level(90)
+	assert mreldif(e(b), `b0') == 0
 	tempname b
 	matrix `b' = e(b)
 	ereturn clear

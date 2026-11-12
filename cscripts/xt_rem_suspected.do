@@ -39,7 +39,7 @@ scalar XLL = e(ll)
 
 * ---------------------------------------------------------------------------------------------------------------------
 di as text "{hline 60}"
-* CONFIRMED BUG S1 (triage: ids of 8+ digits, i.e. >= 10,000,000, already fail; %9.0g prints 1.00e+07)
+* CORE BUG S1 (cause in core nwset; nwrem refuses the events with r(416) until the core is fixed. Triage: ids of 8+ digits, i.e. >= 10,000,000, already fail; %9.0g prints 1.00e+07)
 di as text "S1: numeric actor ids above 16,777,216 (not exact in float): 20000001, 20000003, ..."
 di as text "{hline 60}"
 * core nwset.ado:285-286 labels events "n" + strofreal(id) (format %9.0g) while nwfromedge builds the node names
@@ -54,7 +54,8 @@ capture noisily {
 	assert e(nodes) == 4 & e(N) == 40
 	assert mreldif(e(b), XB) < 1e-12
 }
-if _rc {
+if _rc == 416 di as text "  CORE BUG S1 (not nwrem; nwrem refuses the unmatched events cleanly, r(416))"
+else if _rc {
 	local ++fails
 	local failed "`failed' S1"
 	di as error "  FAIL S1 (r(`=_rc')): large numeric ids"
@@ -63,7 +64,7 @@ else di as text "  PASS: S1"
 
 * ---------------------------------------------------------------------------------------------------------------------
 di as text "{hline 60}"
-* CONFIRMED BUG S2 (same cause as S1)
+* CORE BUG S2 (same cause as S1)
 di as text "S2: numeric actor ids 1e9, 2e9, 3e9, 4e9 (exact in float, but %9.0g prints 1.000e+09)"
 di as text "{hline 60}"
 capture noisily {
@@ -77,7 +78,8 @@ capture noisily {
 	assert e(nodes) == 4 & e(N) == 40
 	assert mreldif(e(b), XB) < 1e-12
 }
-if _rc {
+if _rc == 416 di as text "  CORE BUG S2 (not nwrem; nwrem refuses the unmatched events cleanly, r(416))"
+else if _rc {
 	local ++fails
 	local failed "`failed' S2"
 	di as error "  FAIL S2 (r(`=_rc')): ids of 1e9 and more"
@@ -135,22 +137,22 @@ else di as text "  PASS: S4"
 
 * ---------------------------------------------------------------------------------------------------------------------
 di as text "{hline 60}"
-* DECIDED S5 (owner 2026-11-12): keep relevent behaviour (fit as directed), document it in the help; check kept as a reminder
-di as text "S5 (DESIGN): an undirected event network"
+* DECIDED S5 (owner 2026-11-12): keep the relevent behaviour, an undirected event network is fitted as directed
+* (documented in the help): same numbers as the directed declaration
+di as text "S5: an undirected event network is fitted as directed"
 di as text "{hline 60}"
-* nwrem never looks at `directed'; the ordinal likelihood runs over ordered pairs. nwdynam refuses undirected
-* networks for its directed sub-models (r(198)); nwrem silently fits a directed model.
 capture noisily {
 	nwclear
 	xt_w40
 	nwset sender receiver, eventtime(t) undirected name(wund)
-	capture noisily nwrem wund, nodsnd nidrec seed(1)
-	assert _rc == 198
+	nwrem wund, nodsnd nidrec seed(1)
+	assert mreldif(e(b), XB) < 1e-10
+	assert reldif(e(ll), XLL) < 1e-10
 }
 if _rc {
 	local ++fails
 	local failed "`failed' S5"
-	di as error "  FAIL S5: undirected event network accepted silently"
+	di as error "  FAIL S5: undirected event network not fitted as directed"
 }
 else di as text "  PASS: S5"
 
@@ -285,6 +287,36 @@ if _rc {
 	di as error "  FAIL N2: self-loop refusal loses its message (r(3300))"
 }
 else di as text "  PASS: N2"
+
+* ---------------------------------------------------------------------------------------------------------------------
+di as text "{hline 60}"
+di as text "N1: replay (nwrem alone, nwrem, level(90), estimates replay)"
+di as text "{hline 60}"
+capture noisily {
+	nwclear
+	xt_w40
+	nwset sender receiver, eventtime(t) directed name(wrp)
+	nwrem wrp, nodsnd nidrec seed(1)
+	matrix XR = e(b)
+	estimates store xtrp
+	nwrem
+	nwrem, level(90)
+	ereturn clear
+	estimates replay xtrp
+	estimates restore xtrp
+	nwrem
+	assert mreldif(e(b), XR) == 0
+	ereturn clear
+	capture nwrem
+	assert _rc == 301
+	estimates drop xtrp
+}
+if _rc {
+	local ++fails
+	local failed "`failed' N1"
+	di as error "  FAIL N1: replay"
+}
+else di as text "  PASS: N1"
 
 if `fails' > 0 {
 	di as error "suspected problems confirmed: `failed'"

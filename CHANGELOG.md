@@ -3,6 +3,23 @@
 All notable changes to nwrem are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+- Per-actor covariates (`covsnd()`, `covrec()`, `covint()`) are matched to the actors by their node labels (variable `_nwnode`, as after `nwload, xvars`) instead of by row position; a re-sorted dataset no longer misaligns them. Without `_nwnode` the data must still have one row per actor in actor order. An actor without a row, or with more than one, is refused (r(198)).
+- A missing covariate value is refused with a clear message (r(416)); before, the fit failed with r(111) after many "initial values not feasible" lines.
+- Events with a missing time, or with a sender or receiver that is not an actor of the network (for example a missing id), are refused (r(416)); before, an event without a time was silently used as the last event and a missing id gave a raw Mata error.
+- A self-loop event gives its message and r(3498); the message was lost (Mata r(3300)) because it was too long for Mata's `_error()`.
+- Covariate names longer than 25 characters no longer fail (r(198)): coefficient names longer than 32 characters are cut to 32.
+- `seed()` accepts integers from 0 to 2147483647 only; `seed(-1)` used to be ignored silently.
+- `nwrem` without arguments (or with `level()` only) redisplays the last fit, and `estimates replay` works; new option `level()`.
+- Help: an undirected event network is fitted as directed, like relevent's `rem.dyad()`, which has no undirected variant; the event-data rules and the covariate matching are documented.
+
+### Results that change
+- Covariate effects on a dataset whose rows are not in actor order but carry `_nwnode`: the covariate is now matched to the right actors.
+
+Mata library `lnwrem.mlib` rebuilt with Stata 17 (new function `rem_node_rows()`, self-loop message).
+
 ## [1.0.13] - 2026-11-12
 
 ### Fixed

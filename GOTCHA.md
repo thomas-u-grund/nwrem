@@ -68,3 +68,21 @@ by hand "fixes" it for that session only, which hid the bug in every manual test
 ## `nwinstall, buildmata(nwrem)` compiles the source files listed in the core (2026-11-03)
 
 The user-side rebuild of lnwrem.mlib lives in the core (`nwinstall_buildmata.ado`, table `nwinstall_buildmata_tab`): it lists the source files of this package, the library names and the `mata mlib add` patterns copied from `lib/build.do`. If this package gets a new Mata source file (as nwsaom did with `unw_saom_struct.do`, included by `unw_saom.do`) or another library, the table must change, or the rebuild fails with "file ... not found" (r(601)) or leaves functions out. The sources fetched are those on `main`.
+
+## Mata `_error("long text")` loses the message (r(3300))
+
+`_error(errtxt)` fails itself with r(3300) "argument out of range" when the text is longer than about 110 characters (100
+works, 120 fails), and the intended message is never shown. Print long messages with `errprintf()` and leave with
+`exit(rc)` (Mata `exit(3498)` returns r(3498) to Stata without a traceback).
+
+## Replay and the optional network name
+
+`nwrem, nodsnd` (no network name: the current network) also starts with a comma, so Stata's `replay()` is true for it.
+The replay branch therefore only replays when `syntax [, Level(cilevel)]` accepts the options; any effect option falls
+through to a fit.
+
+## Event lists can hold actor index 0 or a missing time
+
+The core's `build_eventlist()` gives index 0 to an event whose sender or receiver label is not a node name (missing id,
+or core S1: numeric ids >= 1e7 are labelled with %9.0g in nwset but named with %18.0g), and `nwset` keeps missing event
+times. `nwrem.ado` refuses both before the fit (r(416)).
