@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.1.1  13nov2026 author: Thomas Grund}{...}
+{* *! version 1.1.2  13nov2026 author: Thomas Grund}{...}
 {marker topic}
 {helpb nwtopical##analysis_dynamicmodels:[NW-2.6.8] Dynamic & Event-Based Models}
 
@@ -307,4 +307,4 @@ the R package it was compared with in {cmd:r(reference)}, and the license in {cm
 {p 4 14 2}Help: {help nwset}, {help nwattime}, {help nwergm}, {help nwsaom}{p_end}
 
 {hline}
-{pstd}{it:nwrem version 1.1.1, 13 November 2026}{p_end}{* nwversion}
+{pstd}{it:nwrem version 1.1.2, 13 November 2026}{p_end}{* nwversion}

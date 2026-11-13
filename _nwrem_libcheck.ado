@@ -1,4 +1,4 @@
-*! version 1.1.1  13nov2026 _nwrem_libcheck - make the nwrem Mata library visible
+*! version 1.1.2  13nov2026 _nwrem_libcheck - make the nwrem Mata library visible
 * Copyright (C) 2026 Thomas U. Grund
 * This file is part of nwrem (GPL-3, see the file LICENSE).
 * Stata indexes the Mata libraries (.mlib) once, early in a session. A library installed by net install can be missing from that
