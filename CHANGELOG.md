@@ -3,6 +3,12 @@
 All notable changes to nwrem are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+- **Help:** `covsnd()`, `covrec()` and `covint()` are described as numeric covariates (a string variable was already refused with r(109)). nwrem has no effect that compares categories, so it does not take string variables.
+- **Help: directed and undirected declarations.** The help says that `nwrem` takes the plain directed `nwset ..., eventtime()` declaration (an undirected declaration is not required), that every event is read as directed from the first variable (sender) to the second (receiver) whatever the declaration says, and that `undirected` changes only the network summary built by `nwset`, not the estimates. New test `test_nwrem_direction`.
+
 ## [1.1.0] - 2026-11-13
 
 ### Results that change (read before you re-run old analyses)

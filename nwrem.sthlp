@@ -92,6 +92,18 @@ step. It requires {it:netname} to already be declared as an {bf:event}-type temp
 	{cmd:. nwrem mynet, nodsnd nidrec}
 
 {pstd}
+{bf:Direction.} {cmd:nwrem} accepts a directed and an undirected declaration alike, and no option
+is needed: the plain declaration above (directed, {help nwset}'s default) is the usual one; an
+{bf:undirected} declaration is not required. Every event is read as a directed event from the
+first variable (the sender) to the second (the receiver), and the risk set at each event is the
+{it:n}({it:n}-1) ordered pairs, whatever the declaration says. Adding {opt undirected} to
+{cmd:nwset} changes only the network summary that {cmd:nwset} builds from the events (for example
+in {cmd:nwsummarize}), not the events or the estimates of {cmd:nwrem}. The sender and receiver
+effects ({bf:nodsnd}, {bf:nidrec}, {bf:frrecsnd} ...) depend on the order of the two variables, so
+put the actor who starts the event first. Events between two actors without a sender (undirected
+events) are not modeled as such; {cmd:nwrem} treats the first actor as the sender.
+
+{pstd}
 {bf:Speed}: {cmd:nwrem} runs in Mata (there is no compiled plugin). Timed against R's
 {cmd:relevent::rem.dyad()} 1.2-1 ({cmd:ordinal=TRUE}, maximum likelihood, covariance matrix computed by both) on
 simulated event streams of 200 to 20,000 events among 20 to 100 actors, on one machine (Apple M5 Pro, Stata 17,
