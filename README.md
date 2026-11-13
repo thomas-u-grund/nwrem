@@ -1,6 +1,6 @@
 # nwrem
 
-<!--version-->**Version 1.0.13** (released 12 November 2026)<!--/version-->
+<!--version-->**Version 1.1.0** (released 13 November 2026)<!--/version-->
 
 `nwrem` fits relational event models (REM) to a sequence of timed events between actors (who sends to whom, when), declared as an event-type temporal network with `nwset ..., eventtime()`. It estimates degree, inertia, recency and covariate effects by (partial) likelihood.
 
@@ -10,7 +10,7 @@ own repository; it needs the core package nwcommands but no other model package.
 ## Install
 
 1. Install the core package first (Stata): `net install nwcommands, from(https://nwcommands.org/net/) replace`
-   (alternative: `from(https://raw.githubusercontent.com/thomas-u-grund/nwcommands/main/)`). Required: nwcommands (core), version 3.6.0 or later.
+   (alternative: `from(https://raw.githubusercontent.com/thomas-u-grund/nwcommands/main/)`). Required: nwcommands (core), version 3.22.0 or later.
 2. Install this package from the core: `nwinstall, modelpkg(nwrem)`.
    `nwinstall, everything` installs the core and all four model packages in one step; `nwinstall, all` installs the core only and `nwinstall, models` adds the model packages to it.
 
@@ -20,7 +20,7 @@ own repository; it needs the core package nwcommands but no other model package.
 
 To install a specific version, point `from()` at the release tag (GitHub serves every tag under its own raw URL), for example version 1.0.8:
 
-       net install nwrem, from(https://raw.githubusercontent.com/thomas-u-grund/nwrem/v1.0.13/) replace
+       net install nwrem, from(https://raw.githubusercontent.com/thomas-u-grund/nwrem/v1.1.0/) replace
 
 `net describe nwrem` shows the version and distribution date, `nwrem version` the package, core and plugin versions, and `e(version)`
 holds the package version in the stored results. Release history: `CHANGELOG.md`; how releases are made: `RELEASING.md`.
@@ -28,7 +28,7 @@ holds the package version in the stored results. Release history: `CHANGELOG.md`
 
 ## Requirements
 
-* Stata 17 or later. Tested with Stata 17 and Stata 18 (Stata/BE is enough). The Mata libraries are built with Stata 17, the oldest tested version, because a library built by a newer Stata is ignored by older ones; Stata 16 and older have not been tested and are not expected to work.
+* Stata 17 or later. Tested on macOS with Stata 17, 18 and 19 and on Windows with Stata 19 (Stata/BE is enough). The Mata libraries are built with Stata 17, the oldest tested version, because a library built by a newer Stata is ignored by older ones; Stata 16 and older have not been tested and are not expected to work.
 * The core nwcommands package (see above), including its Mata library `lnwcommands.mlib`.
 
 ## Speed

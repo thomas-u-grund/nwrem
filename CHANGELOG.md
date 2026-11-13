@@ -3,7 +3,10 @@
 All notable changes to nwrem are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project uses [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.1.0] - 2026-11-13
+
+### Results that change (read before you re-run old analyses)
+- Covariate effects on a dataset whose rows are not in actor order but carry `_nwnode`: the covariate is now matched to the right actors.
 
 ### Fixed
 - Per-actor covariates (`covsnd()`, `covrec()`, `covint()`) are matched to the actors by their node labels (variable `_nwnode`, as after `nwload, xvars`) instead of by row position; a re-sorted dataset no longer misaligns them. Without `_nwnode` the data must still have one row per actor in actor order. An actor without a row, or with more than one, is refused (r(198)).
@@ -15,10 +18,12 @@ project uses [Semantic Versioning](https://semver.org/).
 - `nwrem` without arguments (or with `level()` only) redisplays the last fit, and `estimates replay` works; new option `level()`.
 - Help: an undirected event network is fitted as directed, like relevent's `rem.dyad()`, which has no undirected variant; the event-data rules and the covariate matching are documented.
 
-### Results that change
-- Covariate effects on a dataset whose rows are not in actor order but carry `_nwnode`: the covariate is now matched to the right actors.
+### Changed
+- Rebuilt for nwcommands 3.22.0; requires core 3.22.0 or later.
 
 Mata library `lnwrem.mlib` rebuilt with Stata 17 (new function `rem_node_rows()`, self-loop message).
+
+Tested on macOS with Stata 17 BE, Stata 18 BE and StataNow 19.5 MP (the full test suite) and on Windows 11 with StataNow 19.5 MP. Linux: not tested in Stata.
 
 ## [1.0.13] - 2026-11-12
 

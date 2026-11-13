@@ -3,9 +3,9 @@ d nwrem. Relational event models (Butts 2008) for event-time networks declared w
 d Thomas U. Grund, RWTH Aachen University, www.grund.co.uk
 d email: thomas.u.grund@gmail.com
 d GPL-3. Requires the core package nwcommands.
-d Requires nwcommands (core), version 3.6.0 or later
-d Version: 1.0.13
-d Distribution-Date: 12nov2026
+d Requires nwcommands (core), version 3.22.0 or later
+d Version: 1.1.0
+d Distribution-Date: 13nov2026
 f nwrem.ado
 f _nwrem_libcheck.ado
 f nwrem_version.ado
