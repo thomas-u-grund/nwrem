@@ -13,16 +13,18 @@ adopath ++ `"`nwcore'"'
 adopath ++ `"`c(pwd)'"'
 quietly do `"`nwcore'/unw_core.do"'
 quietly do unw_rem.do
+global nwwebpath `"`nwcore'/data"'
 
 nwclear
-nwwebuse socialevolution, nwclear
+nwwebuse manufacturing, nwclear
+keep if t < 4.5
 tempfile ev
 quietly save `ev'
 nwset sender receiver, eventtime(t) name(callsd)
 nwrem callsd, nodsnd nidrec frpsndsnd frrecsnd
 matrix bd = e(b)
 scalar lld = e(ll)
-assert e(N) == 439 | e(N) == .
+assert e(N) == 509 | e(N) == .
 use `ev', clear
 nwset sender receiver, eventtime(t) name(callsu) undirected
 nwrem callsu, nodsnd nidrec frpsndsnd frrecsnd

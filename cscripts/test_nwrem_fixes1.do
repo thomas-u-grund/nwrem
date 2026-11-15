@@ -16,7 +16,8 @@ do unw_rem.do
 global nwwebpath `"`nwcore'/data"'
 
 nwclear
-nwwebuse socialevolution, nwclear
+nwwebuse manufacturing, nwclear
+keep if t < 4
 nwset sender receiver, eventtime(t) directed name(calls)
 
 nwrem calls, nodsnd nidsnd ntdegsnd

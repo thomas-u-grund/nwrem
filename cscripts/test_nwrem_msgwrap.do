@@ -72,7 +72,8 @@ _mw_check `l1' "nwrem requires a network declared via nwset's eventtime() option
 
 * 2. note: effects that are not identified (ntdegsnd = (nodsnd + nidsnd)/2)
 nwclear
-nwwebuse socialevolution, nwclear
+nwwebuse manufacturing, nwclear
+keep if t < 4
 nwset sender receiver, eventtime(t) directed name(ev)
 log using `l2', text replace name(mw2)
 nwrem ev, nodsnd nidsnd ntdegsnd seed(1)

@@ -25,7 +25,8 @@ program _fx_has, rclass
 end
 
 nwclear
-nwwebuse socialevolution, nwclear
+nwwebuse manufacturing, nwclear
+keep if t < 4
 nwset sender receiver, eventtime(t) directed name(calls)
 
 tempfile lg
