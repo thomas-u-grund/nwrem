@@ -104,22 +104,37 @@ put the actor who starts the event first. Events between two actors without a se
 events) are not modeled as such; {cmd:nwrem} treats the first actor as the sender.
 
 {pstd}
-{bf:Speed}: {cmd:nwrem} runs in Mata (there is no compiled plugin). Timed against R's
-{cmd:relevent::rem.dyad()} 1.2-1 ({cmd:ordinal=TRUE}, maximum likelihood, covariance matrix computed by both) on
-simulated event streams of 200 to 20,000 events among 20 to 100 actors, on one machine (Apple M5 Pro, Stata 17,
-R 4.6, 26 October 2026; median of 5 fits, 3 or fewer for the largest), the ratio of the time of {cmd:relevent} to
-the time of {cmd:nwrem} ranged from 0.75 to 36. {cmd:nwrem} was faster with the degree effects
-({bf:nodsnd nidrec nidsnd nodrec}: 1.3 to 5.9 times; the two-effect model at 200 events was equal, 0.92), with {bf:covsnd covrec covint} (1.7 to 2.5 times) and,
-much more strongly, with {bf:frpsndsnd frrecsnd} added (14 times at 200 events, 36 times at 1,000 events;
-at 5,000 events {cmd:relevent} needed more than 10 minutes, {cmd:nwrem} 34 seconds). With the recency effects
-{bf:rsndsnd rrecsnd} {cmd:nwrem} was slightly slower up to 1,000 events (ratios 0.75 to 0.9)  and about equal at
-5,000 events; with 20,000 events and these effects neither program finished within 10 minutes. The largest
-fits ({cmd:nwrem} with 20,000 events and 100 actors) took between 1.6 and 9.5 minutes. If {cmd:relevent} is run
-with {cmd:hessian=FALSE} it is 1.4 to 2.2 times faster than in these timings, which makes {cmd:nwrem}
-the slower program for the smallest models and for the recency effects. The time grows with the number of events
-times the square of the number of actors. The coefficients of the two programs agree to about three
-significant digits (largest absolute difference 5e-3 for coefficients of about 25), not to six; both stop
-at their own convergence tolerance. Timings depend on the machine, the data and the effects.
+{bf:Speed}: {cmd:nwrem} runs in Mata (there is no compiled plugin). It was timed against R's
+{cmd:relevent::rem.dyad()} 1.2-1 ({cmd:ordinal=TRUE}, maximum likelihood) on simulated event streams of 200 to
+20,000 events among 20 to 100 actors, with five effect sets: {bf:nodsnd nidrec}; {bf:nodsnd nidrec nidsnd nodrec};
+these four with {bf:frpsndsnd frrecsnd}; {bf:nodsnd nidrec rsndsnd rrecsnd}; and {bf:nodsnd nidrec} with
+{bf:covsnd covrec covint}. {cmd:nwrem} always computes the covariance matrix, so the like-for-like setting of
+{cmd:relevent} is {cmd:hessian=TRUE}; with {cmd:hessian=FALSE} (the default of {cmd:relevent}) it is 1.1 to 2.2
+times faster than that. Both settings were timed. {cmd:nwrem} 1.2.0 was run in Stata 17 on 15 November 2026, the
+times of {cmd:relevent} (R 4.6.0) are from 26 and 27 October 2026, both on the same Apple M5 Pro; every fit ran in
+its own process after an untimed warm-up fit; the ratios are ratios of medians (7 fits of {cmd:nwrem}, 5 in the largest cell;
+5, 3 or 1 fits of {cmd:relevent} in the cells where it needed more than a minute). The time of the first call in a
+Stata session is about 0.1 seconds longer, because the Mata library is loaded; it is not in the times.
+
+{pstd}
+{cmd:nwrem} was faster than {cmd:relevent} in every cell in which both programs finished: the ratio of the time of
+{cmd:relevent} to the time of {cmd:nwrem} ranged from 3.3 to 213 with {cmd:hessian=TRUE} and from 2.1 to 96 with
+{cmd:hessian=FALSE}. By effect set (with the Hessian): 22 to 117 for the two degree effects, 17 to 88 for the four
+degree effects, 84 to 213 with the inertia effects added, 3.3 to 15 with the recency effects ({bf:rsndsnd rrecsnd}; the
+smallest ratios) and 20 to 105 with the covariate effects. {cmd:nwrem} needed 0.009 seconds for the two-effect model at
+200 events and 20 actors, 0.4 seconds at 5,000 events and 50 actors, and 3.7 seconds at 20,000 events and 100 actors;
+the largest fits were 20,000 events and 100 actors with the recency effects (97 seconds, median of 5 fits) and with the
+inertia effects (43 seconds). With 20,000 events {cmd:relevent} did not finish within 600 seconds with the Hessian
+for the four degree effects, the recency effects and the covariate effects (ratios above 98, 6.2 and 47);
+without the Hessian it needed 575 seconds for the four degree effects and 588 seconds for the recency effects (ratios
+94 and 6.1) and again more than 600 seconds with the covariate effects. With the inertia effects {cmd:relevent}
+did not finish within 600 seconds at 5,000 events and 50 actors ({cmd:nwrem}: 3.9 seconds, ratio above 154) and was
+not run for the larger models. The peak memory of the Stata process was 0.2 GB with 200 events, 0.35 GB with 5,000 events
+and 50 actors and 0.6 GB with 20,000 events and 100 actors; the memory of {cmd:relevent} was not measured. The
+coefficients of the two programs agree to about three significant digits, not to six (largest absolute difference
+0.016, for coefficients of about 10 to 50; at most 0.007 standard errors of {cmd:relevent}); both stop at their own
+convergence tolerance. Timings depend on the machine, the data and the effects, and the times of
+{cmd:relevent} come from a different day than those of {cmd:nwrem}.
 
 {pstd}
 {bf:Direction}: the model is always fitted for directed events, the first variable of {help nwset}

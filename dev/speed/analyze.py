@@ -16,12 +16,12 @@ for f in ['R_times_big.csv']:
         if secs.startswith('TIMEOUT'): RT[(size,sn)]='timeout'; continue
         R[(size,sn)].append(float(secs)); Rc[(size,sn)]=dict(zip([x.lower().split(".")[0] for x in names.split()],map(float,coef.split())))
 N=collections.defaultdict(list); Nc=collections.defaultdict(list); NT={}
-for f in ['nw_times_s17_partial.csv','nw_times_e20k17.csv']:
+for f in ['nw_times_120.csv']:
     for r in rows(f):
         if len(r)<7: continue
         size,sn,rep,secs,coef,names=r[:6]
         if secs.startswith('TIMEOUT'):
-            if size=='e20000' and f.startswith('nw_times_s17'): continue
+            if size=='e20000': continue
             NT[(size,sn)]='timeout'; continue
         N[(size,sn)].append(float(secs))
         Nc[(size,sn)].append(dict(zip([x.split('_')[0] for x in names.split()],map(float,coef.split()))))
