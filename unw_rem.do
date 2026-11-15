@@ -41,6 +41,14 @@ capture mata: mata drop RemFitUnit1()
 capture mata: mata drop rem_loglik_unit1()
 capture mata: mata drop rem_eval_unit1()
 capture mata: mata drop rem_node_rows()
+capture mata: mata drop RemDyn()
+capture mata: mata drop rem_fast_prep()
+capture mata: mata drop rem_fast_deg()
+capture mata: mata drop rem_fast_usable()
+capture mata: mata drop rem_sumexcl()
+capture mata: mata drop rem_loglik_grad_fast()
+capture mata: mata drop rem_loglik_grad_auto()
+capture mata: mata drop rem_dependent_effects()
 
 mata:
 mata set matastrict off
@@ -61,6 +69,9 @@ class RemState {
 	real scalar nevents
 	real matrix cumindeg   // nevents x n
 	real matrix cumoutdeg  // nevents x n
+	real colvector ODs, ODr, IDs, IDr, TDs, TDr   // degree shares of the realized sender / receiver at every event (rem_fast_prep())
+	real scalar chunkcells // events per block of the fast evaluator: about this many cells (missing: 1.5e6; the tests set small values)
+	real scalar fast       // 1: rem_loglik_grad_auto() tries the fast evaluator first (set by RemFitMulti())
 
 	void init()
 	void build_degree_accumulators()
@@ -583,6 +594,438 @@ void rem_loglik_grad_multi(real rowvector theta, real rowvector active,
 }
 
 /*
+	FAST EVALUATOR. rem_loglik_grad_multi() above builds a dense n x n risk-set matrix for every event: O(nevents n^2)
+	work per likelihood evaluation, and an optimizer needs 30 to 500 evaluations. The log-rate matrix has the form
+	lrm[j,k] = a_j + b_k + delta_jk (j != k): the degree and covariate effects (1-6, 9-11) put a term on the sender
+	only (a) or on the receiver only (b); only the dyadic effects (7, 8, 12, 13, 14) make up delta. Without delta the
+	normaliser of the event is Z = (sum_j e^a_j)(sum_k e^b_k) minus the diagonal, O(n) per event, and no event loop is
+	needed: whole blocks of events are handled as matrices. The static dyadic effect (12) needs F = exp(theta delta)
+	once per evaluation and Z for a block of events from one (events x n)(n x n) product. The state-dependent dyadic
+	effects (7, 8, 13, 14) change only the rows of the sender and the receiver after every event, so F and
+	the products D :* F are kept as n x n matrices and updated at those two rows (loop over events, O(n^2) per event
+	but with matrix-vector products instead of an n x n softmax with a sort).
+	The result is the same likelihood and gradient as rem_loglik_grad_multi() up to rounding (about 1e-12 relative).
+	Safeguards: the shifts of a and b are taken separately (rowmax), so Z can underflow where the global shift of the
+	dense evaluator does not; exp() overflow gives a missing value in Mata and sum() ignores missing values silently.
+	The fast evaluator therefore checks every normaliser and every exponentiated matrix and returns 0 when anything is
+	missing, non-positive or smaller than 1e-250; rem_loglik_grad_auto() then uses the dense evaluator for that
+	evaluation. Z = (sum e^a)(sum e^b) minus the diagonal cancels badly when one actor carries almost all the mass:
+	the sum excluding the maximum cell is recomputed exactly (rem_sumexcl()). Memory: events are processed in blocks
+	of about 1.5 million cells, so 50,000 events and 170 actors stay far below one gigabyte.
+*/
+
+// the degree shares of the realized sender / receiver at every event (do not depend on theta)
+void rem_fast_prep(class RemState scalar S)
+{
+	real scalar i, n, m, pn, fb, s, r
+	n = S.n
+	m = S.nevents
+	fb = 1 / (n - 1)
+	S.ODs = J(m, 1, fb); S.ODr = J(m, 1, fb); S.IDs = J(m, 1, fb); S.IDr = J(m, 1, fb); S.TDs = J(m, 1, fb); S.TDr = J(m, 1, fb)
+	for (i = 2; i <= m; i++) {
+		pn = i - 1
+		s = S.events[i,1]
+		r = S.events[i,2]
+		S.ODs[i] = S.cumoutdeg[i,s] / pn
+		S.ODr[i] = S.cumoutdeg[i,r] / pn
+		S.IDs[i] = S.cumindeg[i,s] / pn
+		S.IDr[i] = S.cumindeg[i,r] / pn
+		S.TDs[i] = (S.cumoutdeg[i,s] + S.cumindeg[i,s]) / (2 * pn)
+		S.TDr[i] = (S.cumoutdeg[i,r] + S.cumindeg[i,r]) / (2 * pn)
+	}
+}
+
+// the shares of events i0..i1 (same values as odeg_frac, ideg_frac, tdeg_frac of rem_loglik_grad_multi()); only the
+// matrices that an active effect needs are built
+void rem_fast_deg(class RemState scalar S, real scalar i0, real scalar i1, real rowvector active,
+		real matrix OD, real matrix ID, real matrix TD)
+{
+	real colvector den
+	real matrix co, ci
+	real scalar n
+	n = S.n
+	den = ((i0 - 1) :: (i1 - 1))
+	if (i0 == 1) den[1] = 1
+	OD = J(0, 0, .); ID = J(0, 0, .); TD = J(0, 0, .)
+	if (active[1] | active[4] | active[5] | active[6]) co = S.cumoutdeg[|i0,1 \ i1,n|]
+	if (active[2] | active[3] | active[5] | active[6]) ci = S.cumindeg[|i0,1 \ i1,n|]
+	if (active[1] | active[4]) OD = co :/ den
+	if (active[2] | active[3]) ID = ci :/ den
+	if (active[5] | active[6]) TD = (co :+ ci) :/ (2 :* den)
+	if (i0 == 1) {
+		if (rows(OD)) OD[1,.] = J(1, n, 1 / (n - 1))
+		if (rows(ID)) ID[1,.] = J(1, n, 1 / (n - 1))
+		if (rows(TD)) TD[1,.] = J(1, n, 1 / (n - 1))
+	}
+}
+
+// 1 when the fast evaluator is worth using and its matrices fit in memory
+real scalar rem_fast_usable(real rowvector active, real scalar n)
+{
+	real scalar dyn
+	dyn = active[7] | active[8] | active[13] | active[14]
+	if (n < 3) return(0)
+	if ((dyn | active[12]) & 12 * n * n > 4e7) return(0)   // about 320 MB of n x n matrices: use the dense evaluator
+	return(1)
+}
+
+// for every row of E: the sum over all cells except the cell j, for every j (row sum minus the cell), with the cell
+// that holds the row maximum recomputed without cancellation (ties: the other maximum cells are counted)
+real matrix rem_sumexcl(real matrix E)
+{
+	real colvector mx
+	real matrix M
+	mx = rowmax(E)
+	M = (E :== mx)
+	return((rowsum(E) :- E) :* (1 :- M) :+ M :* (rowsum(E :* (1 :- M)) :+ (rowsum(M) :- 1) :* mx))
+}
+
+/*
+	RemDyn -- the state of the dyadic effects 7, 8, 12, 13, 14 for the fast evaluator: the effect matrices D (n x n),
+	the log-rate part delta, F = exp(delta) with a zero diagonal and the products G = D :* F, kept current by row():
+	after an event only the rows of the sender (cij[s,.], lc[s,.]) and of the receiver (cij[.,r], lc[.,r]) change.
+*/
+class RemDyn {
+	real scalar n, fb, t7, t8, t12, t13, t14, a7, a8, a12, a13, a14
+	real matrix cij, lc, D7, D8, D13, D14, C, delta, F, G7, G8, G13, G14, G12
+
+	void init()
+	real scalar row()
+}
+
+void RemDyn::init(real rowvector theta, real rowvector active, real rowvector idx, real matrix Cin, real scalar nn)
+{
+	n = nn
+	fb = 1 / (n - 1)
+	a7 = active[7]; a8 = active[8]; a12 = active[12]; a13 = active[13]; a14 = active[14]
+	t7 = a7 ? theta[idx[7]] : 0
+	t8 = a8 ? theta[idx[8]] : 0
+	t12 = a12 ? theta[idx[12]] : 0
+	t13 = a13 ? theta[idx[13]] : 0
+	t14 = a14 ? theta[idx[14]] : 0
+	C = Cin
+	cij = J(n, n, 0); lc = J(n, n, 0)
+	D7 = J(n, n, 0); D8 = J(n, n, 0); D13 = J(n, n, 0); D14 = J(n, n, 0)
+	G7 = J(n, n, 0); G8 = J(n, n, 0); G13 = J(n, n, 0); G14 = J(n, n, 0); G12 = J(n, n, 0)
+	delta = J(n, n, 0); F = J(n, n, 0)
+}
+
+// recompute row j after a change; co / ci: out- and in-degree of actor j (counts) at the state now held. Returns 0 when exp() overflowed
+real scalar RemDyn::row(real scalar j, real scalar co, real scalar ci)
+{
+	real rowvector d, f
+	d = J(1, n, 0)
+	if (a12) d = d :+ t12 :* C[j,.]
+	if (a7) {
+		if (co != 0) D7[j,.] = cij[j,.] :/ co
+		else D7[j,.] = J(1, n, fb)
+		d = d :+ t7 :* D7[j,.]
+	}
+	if (a8) {
+		if (ci != 0) D8[j,.] = cij[.,j]' :/ ci
+		else D8[j,.] = J(1, n, fb)
+		d = d :+ t8 :* D8[j,.]
+	}
+	if (a13) {
+		D13[j,.] = rem_rank_reciprocal(lc[j,.]')
+		d = d :+ t13 :* D13[j,.]
+	}
+	if (a14) {
+		D14[j,.] = rem_rank_reciprocal(lc[.,j])
+		d = d :+ t14 :* D14[j,.]
+	}
+	delta[j,.] = d
+	f = exp(d)
+	f[j] = 0
+	if (hasmissing(f)) return(0)
+	F[j,.] = f
+	if (a7) G7[j,.] = D7[j,.] :* f
+	if (a8) G8[j,.] = D8[j,.] :* f
+	if (a13) G13[j,.] = D13[j,.] :* f
+	if (a14) G14[j,.] = D14[j,.] :* f
+	if (a12) G12[j,.] = C[j,.] :* f
+	return(1)
+}
+
+/*
+	rem_loglik_grad_fast() -- same arguments as rem_loglik_grad_multi(); returns 1 when ll and grad are valid, 0 when the
+	caller must use rem_loglik_grad_multi() instead (see the safeguards in the comment above). rem_fast_prep() must
+	have run on the state.
+*/
+real scalar rem_loglik_grad_fast(real rowvector theta, real rowvector active,
+		real rowvector covsndvec, real rowvector covrecvec, real rowvector covintvec,
+		real matrix covevmat,
+		pointer(class RemState scalar) scalar pS, real scalar ll, real rowvector grad) {
+	real scalar n, m, e, j, i, ii, i0, i1, c, chunk, dyn, sh, th12, s, r, needrow, needcol
+	real rowvector idx, gf, ea, eb
+	real colvector sv, rv, rid, Ma, Mb, Z, lz, lsr, cvsr, ldy
+	real matrix A, B, EA, EB, XA, XB, rowP, colP, T, F, FC, C, Q, OD, ID, TD
+	class RemDyn scalar Y
+
+	n = (*pS).n
+	m = (*pS).nevents
+	idx = J(1, 14, 0)
+	j = 0
+	for (e = 1; e <= 14; e++) {
+		if (active[e]) {
+			j = j + 1
+			idx[e] = j
+		}
+	}
+	dyn = active[7] | active[8] | active[13] | active[14]
+	needrow = active[1] | active[3] | active[5] | active[9] | active[11]
+	needcol = active[2] | active[4] | active[6] | active[10] | active[11]
+	if (hasmissing(theta)) return(0)
+	C = J(n, n, 0)
+	if (active[12]) {
+		// the diagonal is not part of the risk set; the covariate may carry anything there (a missing value, a loop): zero
+		C = covevmat
+		for (j = 1; j <= n; j++) C[j,j] = 0
+		if (hasmissing(C)) return(0)
+		th12 = theta[idx[12]]
+		if (!dyn) {
+			Q = th12 :* C
+			for (j = 1; j <= n; j++) Q[j,j] = -1e300
+			if (hasmissing(Q)) return(0)
+			sh = max(Q)
+			F = exp(Q :- sh)
+			if (hasmissing(F)) return(0)
+			FC = F :* C
+		}
+	}
+	if (dyn) {
+		Y = RemDyn()
+		Y.init(theta, active, idx, C, n)
+		for (j = 1; j <= n; j++) if (Y.row(j, 0, 0) == 0) return(0)
+	}
+
+	chunk = max((1, min((m, floor((missing((*pS).chunkcells) ? 1.5e6 : (*pS).chunkcells) / n)))))
+	ll = 0
+	gf = J(1, 14, 0)
+	for (i0 = 1; i0 <= m; i0 = i0 + chunk) {
+		i1 = min((m, i0 + chunk - 1))
+		c = i1 - i0 + 1
+		rid = (i0 :: i1)
+		sv = (*pS).events[|i0,1 \ i1,1|]
+		rv = (*pS).events[|i0,2 \ i1,2|]
+		rem_fast_deg(*pS, i0, i1, active, OD, ID, TD)
+		A = J(c, n, 0); B = J(c, n, 0)
+		lsr = J(c, 1, 0)
+		if (active[1]) {
+			A = A :+ theta[idx[1]] :* OD
+			lsr = lsr :+ theta[idx[1]] :* (*pS).ODs[rid]
+		}
+		if (active[2]) {
+			B = B :+ theta[idx[2]] :* ID
+			lsr = lsr :+ theta[idx[2]] :* (*pS).IDr[rid]
+		}
+		if (active[3]) {
+			A = A :+ theta[idx[3]] :* ID
+			lsr = lsr :+ theta[idx[3]] :* (*pS).IDs[rid]
+		}
+		if (active[4]) {
+			B = B :+ theta[idx[4]] :* OD
+			lsr = lsr :+ theta[idx[4]] :* (*pS).ODr[rid]
+		}
+		if (active[5]) {
+			A = A :+ theta[idx[5]] :* TD
+			lsr = lsr :+ theta[idx[5]] :* (*pS).TDs[rid]
+		}
+		if (active[6]) {
+			B = B :+ theta[idx[6]] :* TD
+			lsr = lsr :+ theta[idx[6]] :* (*pS).TDr[rid]
+		}
+		if (active[9]) {
+			A = A :+ theta[idx[9]] :* covsndvec
+			lsr = lsr :+ theta[idx[9]] :* covsndvec'[sv]
+		}
+		if (active[10]) {
+			B = B :+ theta[idx[10]] :* covrecvec
+			lsr = lsr :+ theta[idx[10]] :* covrecvec'[rv]
+		}
+		if (active[11]) {
+			A = A :+ theta[idx[11]] :* covintvec
+			B = B :+ theta[idx[11]] :* covintvec
+			lsr = lsr :+ theta[idx[11]] :* (covintvec'[sv] :+ covintvec'[rv])
+		}
+		Ma = rowmax(A); Mb = rowmax(B)
+		EA = exp(A :- Ma); EB = exp(B :- Mb)
+		A = J(0, 0, .); B = J(0, 0, .)
+		if (hasmissing(EA) | hasmissing(EB)) return(0)
+
+		if (dyn) {
+			Z = J(c, 1, 0)
+			ldy = J(c, 1, 0)
+			rowP = J(c, n, 0); colP = J(c, n, 0)
+			for (ii = 1; ii <= c; ii++) {
+				i = i0 + ii - 1
+				s = sv[ii]; r = rv[ii]
+				ea = EA[ii,.]; eb = EB[ii,.]
+				T = (Y.F * eb')           // n x 1: sum_k F[j,k] eb[k]
+				Z[ii] = ea * T
+				if (Z[ii] < 1e-250 | missing(Z[ii])) return(0)
+				ldy[ii] = Y.delta[s,r]
+				rowP[ii,.] = (ea :* T') :/ Z[ii]
+				colP[ii,.] = (eb :* (ea * Y.F)) :/ Z[ii]
+				if (active[7]) gf[7] = gf[7] + Y.D7[s,r] - ((ea * Y.G7) * eb') / Z[ii]
+				if (active[8]) gf[8] = gf[8] + Y.D8[s,r] - ((ea * Y.G8) * eb') / Z[ii]
+				if (active[12]) gf[12] = gf[12] + C[s,r] - ((ea * Y.G12) * eb') / Z[ii]
+				if (active[13]) gf[13] = gf[13] + Y.D13[s,r] - ((ea * Y.G13) * eb') / Z[ii]
+				if (active[14]) gf[14] = gf[14] + Y.D14[s,r] - ((ea * Y.G14) * eb') / Z[ii]
+				// update AFTER using this event's own pre-event state
+				Y.cij[s,r] = Y.cij[s,r] + 1
+				Y.lc[s,r] = i
+				if (Y.row(s, (*pS).cumoutdeg[i,s] + 1, (*pS).cumindeg[i,s]) == 0) return(0)
+				if (Y.row(r, (*pS).cumoutdeg[i,r], (*pS).cumindeg[i,r] + 1) == 0) return(0)
+			}
+			lz = Ma :+ Mb :+ ln(Z)
+			lsr = lsr :+ ldy
+		}
+		else if (active[12]) {
+			T = EA * F
+			Z = rowsum(T :* EB)
+			if (hasmissing(Z)) return(0)
+			if (min(Z) < 1e-250) return(0)
+			if (needrow) rowP = EA :* (EB * F') :/ Z
+			if (needcol) colP = EB :* T :/ Z
+			cvsr = J(c, 1, 0)
+			for (ii = 1; ii <= c; ii++) cvsr[ii] = C[sv[ii],rv[ii]]
+			lsr = lsr :+ th12 :* cvsr
+			gf[12] = gf[12] + sum(cvsr) - sum(rowsum((EA * FC) :* EB) :/ Z)
+			lz = Ma :+ Mb :+ sh :+ ln(Z)
+		}
+		else {
+			XB = rem_sumexcl(EB)
+			XA = rem_sumexcl(EA)
+			Z = rowsum(EA :* XB)
+			if (hasmissing(Z)) return(0)
+			if (min(Z) < 1e-250) return(0)
+			if (needrow) rowP = EA :* XB :/ Z
+			if (needcol) colP = EB :* XA :/ Z
+			lz = Ma :+ Mb :+ ln(Z)
+		}
+		ll = ll + sum(lsr :- lz)
+		if (hasmissing(ll)) return(0)
+
+		if (active[1]) gf[1] = gf[1] + sum((*pS).ODs[rid]) - sum(OD :* rowP)
+		if (active[2]) gf[2] = gf[2] + sum((*pS).IDr[rid]) - sum(ID :* colP)
+		if (active[3]) gf[3] = gf[3] + sum((*pS).IDs[rid]) - sum(ID :* rowP)
+		if (active[4]) gf[4] = gf[4] + sum((*pS).ODr[rid]) - sum(OD :* colP)
+		if (active[5]) gf[5] = gf[5] + sum((*pS).TDs[rid]) - sum(TD :* rowP)
+		if (active[6]) gf[6] = gf[6] + sum((*pS).TDr[rid]) - sum(TD :* colP)
+		if (active[9]) gf[9] = gf[9] + sum(covsndvec'[sv]) - sum(rowP * covsndvec')
+		if (active[10]) gf[10] = gf[10] + sum(covrecvec'[rv]) - sum(colP * covrecvec')
+		if (active[11]) gf[11] = gf[11] + sum(covintvec'[sv] :+ covintvec'[rv]) - sum((rowP :+ colP) * covintvec')
+	}
+	if (hasmissing(gf)) return(0)
+	grad = J(1, 0, 0)
+	for (e = 1; e <= 14; e++) if (active[e]) grad = (grad, gf[e])
+	return(1)
+}
+
+// likelihood and gradient: the fast evaluator when the state allows it, the dense evaluator otherwise or when the fast one gives up
+real scalar rem_loglik_grad_auto(real rowvector theta, real rowvector active,
+		real rowvector covsndvec, real rowvector covrecvec, real rowvector covintvec,
+		real matrix covevmat,
+		pointer(class RemState scalar) scalar pS, real scalar ll, real rowvector grad) {
+	if ((*pS).fast == 1) {
+		if (rem_loglik_grad_fast(theta, active, covsndvec, covrecvec, covintvec, covevmat, pS, ll, grad)) return(1)
+	}
+	rem_loglik_grad_multi(theta, active, covsndvec, covrecvec, covintvec, covevmat, pS, ll, grad)
+	return(0)
+}
+
+/*
+	rem_dependent_effects() -- before the optimizer runs: which effects are an exact linear function of the effects
+	before them (in the fixed effect order) plus a term that is constant over the risk set of every event? Such an
+	effect cannot change the likelihood (the term cancels in the softmax) and the optimizer would only wander along the
+	flat ridge (hundreds of evaluations). Returns a 1 x 14 0/1 vector. The test is the Gram matrix of the statistics
+	centred within every risk set (j != k), accumulated over the events from sums over senders and receivers, so it costs
+	O(nevents n) and covers the sender and receiver effects (1-6, 9-11) and the static dyadic effect (12); the
+	state-dependent dyadic effects (7, 8, 13, 14) are not examined. An effect is dependent when what is left of its
+	centred sum of squares after the effects before it is below 1e-12 of its uncentred one (rounding of exactly
+	collinear statistics is about 1e-16).
+*/
+real rowvector rem_dependent_effects(real rowvector active, real rowvector covsndvec, real rowvector covrecvec,
+		real rowvector covintvec, real matrix covevmat, class RemState scalar S)
+{
+	real scalar n, m, k, e, f, p, i0, i1, c, chunk, sumC, sumC2, N, r, tol
+	real rowvector dropped, effs, ce, ACr, BCc
+	real colvector rowC, colC, kept
+	real matrix OD, ID, TD, Wa, Wb, Ra, Rb, AA, BB, AB, RaRb, Ssum, P, G, Ae, Be, C
+	real matrix Rs
+
+	dropped = J(1, 14, 0)
+	effs = select((1, 2, 3, 4, 5, 6, 9, 10, 11, 12), active[(1, 2, 3, 4, 5, 6, 9, 10, 11, 12)])
+	k = cols(effs)
+	if (k == 0) return(dropped)
+	n = S.n
+	m = S.nevents
+	N = n * (n - 1)
+	C = J(n, n, 0)
+	if (active[12]) {
+		C = covevmat
+		for (e = 1; e <= n; e++) C[e,e] = 0
+		if (hasmissing(C)) return(dropped)
+	}
+	rowC = rowsum(C)
+	colC = colsum(C)'
+	sumC = sum(C)
+	sumC2 = sum(C :* C)
+	ce = (effs :== 12)
+	AA = J(k, k, 0); BB = J(k, k, 0); AB = J(k, k, 0); RaRb = J(k, k, 0); Ssum = J(k, k, 0)
+	ACr = J(1, k, 0); BCc = J(1, k, 0)
+	chunk = max((1, min((m, floor((missing(S.chunkcells) ? 4e5 : S.chunkcells) / n)))))
+	for (i0 = 1; i0 <= m; i0 = i0 + chunk) {
+		i1 = min((m, i0 + chunk - 1))
+		c = i1 - i0 + 1
+		rem_fast_deg(S, i0, i1, active, OD, ID, TD)
+		Wa = J(c * n, k, 0); Wb = J(c * n, k, 0)
+		Ra = J(c, k, 0); Rb = J(c, k, 0)
+		for (p = 1; p <= k; p++) {
+			e = effs[p]
+			Ae = J(c, n, 0); Be = J(c, n, 0)
+			if (e == 1) Ae = OD
+			else if (e == 2) Be = ID
+			else if (e == 3) Ae = ID
+			else if (e == 4) Be = OD
+			else if (e == 5) Ae = TD
+			else if (e == 6) Be = TD
+			else if (e == 9) Ae = J(c, 1, covsndvec)
+			else if (e == 10) Be = J(c, 1, covrecvec)
+			else if (e == 11) {
+				Ae = J(c, 1, covintvec)
+				Be = Ae
+			}
+			Wa[.,p] = colshape(Ae, 1)
+			Wb[.,p] = colshape(Be, 1)
+			Ra[.,p] = rowsum(Ae)
+			Rb[.,p] = rowsum(Be)
+			ACr[p] = ACr[p] + sum(Ae * rowC)
+			BCc[p] = BCc[p] + sum(Be * colC)
+		}
+		AA = AA + cross(Wa, Wa)
+		BB = BB + cross(Wb, Wb)
+		AB = AB + cross(Wa, Wb)
+		RaRb = RaRb + cross(Ra, Rb)
+		Rs = (n - 1) :* (Ra :+ Rb) :+ J(c, 1, ce :* sumC)
+		Ssum = Ssum + cross(Rs, Rs)
+	}
+	// uncentred second moments summed over events and risk-set cells, and the centred Gram matrix
+	P = (n - 1) :* (AA :+ BB) :+ (RaRb :- AB) :+ (RaRb :- AB)' :+ (ce' * ACr) :+ (ce' * ACr)' :+ (ce' * BCc) :+ (ce' * BCc)' :+ m * sumC2 :* (ce' * ce)
+	G = P :- Ssum :/ N
+	tol = 1e-12
+	kept = J(0, 1, 0)
+	for (p = 1; p <= k; p++) {
+		if (rows(kept) == 0) r = G[p,p]
+		else r = G[p,p] - G[p,kept'] * lusolve(G[kept,kept'], G[kept',p])
+		if (hasmissing(r) | r <= tol * P[p,p]) dropped[effs[p]] = 1
+		else kept = (kept \ p)
+	}
+	return(dropped)
+}
+
+/*
 	Pure log-likelihood wrapper for the multi-effect engine (no
 	gradient) - used by certification tests/diagnostics, same role as
 	rem_loglik_unit1() for the unit-1-only engine.
@@ -603,7 +1046,7 @@ void rem_eval_multi(real scalar todo, real rowvector theta, pointer(real rowvect
 		pointer(class RemState scalar) scalar pS,
 		real scalar y, real rowvector g, real matrix H) {
 	real rowvector grad
-	rem_loglik_grad_multi(theta, *pActive, *pCovSnd, *pCovRec, *pCovInt, *pCovEvent, pS, y, grad)
+	(void) rem_loglik_grad_auto(theta, *pActive, *pCovSnd, *pCovRec, *pCovInt, *pCovEvent, pS, y, grad)
 	if (todo >= 1) g = grad
 }
 
@@ -624,15 +1067,36 @@ void RemFitMulti(real matrix eventmat, real scalar n, real rowvector activevec,
 	transmorphic S_opt
 	real rowvector theta0, theta_hat
 	real matrix V
-	real scalar nparams, attempt, ok, errcode
+	real scalar nparams, attempt, ok, errcode, nfull
 	real matrix starts
+	real rowvector dropped, actred, bfull
+	real colvector kp
+	real matrix Vfull
 
 	S = RemState()
 	S.init(eventmat, n)
 	S.build_degree_accumulators()
 
-	nparams = sum(activevec)
-	if (nparams == 0) _error("nwrem: at least one effect must be selected.")
+	nfull = sum(activevec)
+	if (nfull == 0) _error("nwrem: at least one effect must be selected.")
+
+	// fast evaluator (see rem_loglik_grad_fast()) and the check for exactly dependent effects: such an effect (for
+	// example ntdegsnd together with nodsnd and nidsnd) leaves the likelihood flat along a ridge, and the optimizer
+	// would spend hundreds of evaluations on it. The model without the dependent effects has the same likelihood; the
+	// dependent effects get coefficient 0 and variance 0 (nwrem.ado reports them as not identified).
+	S.fast = rem_fast_usable(activevec, n)
+	if (S.fast == 1) rem_fast_prep(S)
+	dropped = rem_dependent_effects(activevec, covsndvec, covrecvec, covintvec, covevmat, S)
+	actred = activevec :* (1 :- dropped)
+	nparams = sum(actred)
+	kp = selectindex(dropped[selectindex(activevec)] :== 0)
+	if (nparams == 0) {
+		// no effect with an influence on the likelihood: every dyad of every risk set has the same rate
+		st_matrix(bname, J(1, nfull, 0))
+		st_matrix(vname, J(nfull, nfull, 0))
+		st_numscalar(llname, -S.nevents * ln(n * (n - 1)))
+		return
+	}
 
 	// Performance fix (found via direct profiling, the development notes'
 	// own "optimizer performance" entry): the multi-minute slowdown
@@ -692,7 +1156,7 @@ void RemFitMulti(real matrix eventmat, real scalar n, real rowvector activevec,
 		optimize_init_evaluator(S_opt, &rem_eval_multi())
 		optimize_init_evaluatortype(S_opt, "d1")
 		optimize_init_params(S_opt, theta0)
-		optimize_init_argument(S_opt, 1, &activevec)
+		optimize_init_argument(S_opt, 1, &actred)
 		optimize_init_argument(S_opt, 2, &covsndvec)
 		optimize_init_argument(S_opt, 3, &covrecvec)
 		optimize_init_argument(S_opt, 4, &covintvec)
@@ -720,7 +1184,7 @@ void RemFitMulti(real matrix eventmat, real scalar n, real rowvector activevec,
 			optimize_init_evaluator(S_opt, &rem_eval_multi())
 			optimize_init_evaluatortype(S_opt, "d1")
 			optimize_init_params(S_opt, theta0)
-			optimize_init_argument(S_opt, 1, &activevec)
+			optimize_init_argument(S_opt, 1, &actred)
 			optimize_init_argument(S_opt, 2, &covsndvec)
 			optimize_init_argument(S_opt, 3, &covrecvec)
 			optimize_init_argument(S_opt, 4, &covintvec)
@@ -773,7 +1237,7 @@ void RemFitMulti(real matrix eventmat, real scalar n, real rowvector activevec,
 		optimize_init_evaluator(S_opt, &rem_eval_multi())
 		optimize_init_evaluatortype(S_opt, "d1")
 		optimize_init_params(S_opt, starts[rows(starts),.])
-		optimize_init_argument(S_opt, 1, &activevec)
+		optimize_init_argument(S_opt, 1, &actred)
 		optimize_init_argument(S_opt, 2, &covsndvec)
 		optimize_init_argument(S_opt, 3, &covrecvec)
 		optimize_init_argument(S_opt, 4, &covintvec)
@@ -788,8 +1252,12 @@ void RemFitMulti(real matrix eventmat, real scalar n, real rowvector activevec,
 	}
 	V = optimize_result_V_oim(S_opt)
 
-	st_matrix(bname, theta_hat)
-	st_matrix(vname, V)
+	bfull = J(1, nfull, 0)
+	Vfull = J(nfull, nfull, 0)
+	bfull[kp] = theta_hat
+	Vfull[kp,kp] = V
+	st_matrix(bname, bfull)
+	st_matrix(vname, Vfull)
 	st_numscalar(llname, optimize_result_value(S_opt))
 }
 

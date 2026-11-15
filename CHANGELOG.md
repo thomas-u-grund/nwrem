@@ -3,6 +3,17 @@
 All notable changes to nwrem are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project uses [Semantic Versioning](https://semver.org/).
 
+## [1.2.0] - 2026-11-15
+
+### Changed
+- **Fits are much faster.** The likelihood and its gradient are no longer computed from an n x n softmax per event. The log-rate of a dyad is a sum of a sender term, a receiver term and (for `frpsndsnd`, `frrecsnd`, `covevent()`, `rsndsnd`, `rrecsnd`) a dyadic term; the normaliser of every risk set follows from sums over senders and receivers, for all events at once, and the dyadic terms are updated only at the rows of the sender and the receiver after each event. Measured on the manufacturing e-mails, `t < 14` (2,738 events, 129 actors), Apple M5 Pro, Stata 17: `nodsnd nidrec` 20.3 s before, 0.9 s now; plus `frpsndsnd` 38.9 s, 7.5 s; plus `rsndsnd` 61.2 s, 10.7 s; plus `covevent()` 35.4 s, 1.3 s; plus `frpsndsnd` and `covevent()` 67.6 s, 12.2 s; `nodsnd nidsnd ntdegsnd` 280 s, 0.5 s (collinear effects, see below). The models with state-dependent dyadic effects gain a factor of about 5, the others a factor of 24 to 27. 50,000 events and 170 actors need less than 1 second per likelihood evaluation for the sender, receiver and covariate effects (peak memory about 620 MB with all event data held) and about 5 seconds with `frpsndsnd` and `rsndsnd`.
+- **Same estimates.** The new evaluator returns the likelihood and gradient of the previous one to about 1e-12 (relative), the coefficients of the fits above agree to about 1e-11 and the standard errors to about 1e-9. A fit that the fast evaluator cannot do safely (a missing or underflowing normaliser, an overflowing `exp()` at an extreme coefficient, a state too large for its matrices) falls back to the previous evaluator for that evaluation.
+- **Collinear effects are found before the optimizer runs.** An effect that is an exact linear function of the effects before it (plus a term that is constant over every risk set), for example `ntdegsnd` together with `nodsnd` and `nidsnd`, or `covint()` together with `covsnd()` and `covrec()` of one variable, is left out of the estimation: its coefficient is 0, its variance 0, it is listed in `e(unidentified)` and the same note is printed as before. The remaining coefficients and the log likelihood are those of the model without it. The previous version ran the optimizer on the flat ridge (about 500 likelihood evaluations, 5 minutes for `nodsnd nidsnd ntdegsnd` at `t < 14`). The state-dependent dyadic effects (`frpsndsnd`, `frrecsnd`, `rsndsnd`, `rrecsnd`) are not examined.
+- A `covevent()` network with a missing or non-zero diagonal is read as before (the diagonal is not part of the risk set).
+- New test `test_nwrem_fast` (fast against dense evaluator for every effect, every pair, random subsets and all 16,383 subsets of a small system, with tied event times, repeated dyads and valued dyadic covariates, in one block and in small blocks of events; extreme coefficients and the fall-back; the dependence check; fits of the manufacturing e-mails against values of the previous evaluator).
+
+Tested on: TO BE FILLED
+
 ## [1.1.2] - 2026-11-13
 
 ### Changed

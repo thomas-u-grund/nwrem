@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.1.2  13nov2026 author: Thomas Grund}{...}
+{* *! version 1.2.0  15nov2026 author: Thomas Grund}{...}
 {marker topic}
 {helpb nwtopical##analysis_dynamicmodels:[NW-2.6.8] Dynamic & Event-Based Models}
 
@@ -200,7 +200,11 @@ Combining several of these degree-type effects in the same model (e.g. {cmd:nods
 surface along some combination of their coefficients - different starting values can then
 converge to visibly different individual coefficients while fitting the data almost equally
 well; check whether the overall model fit (log likelihood) is what actually matters for your
-question before over-interpreting any single coefficient in that situation. The fitted model
+question before over-interpreting any single coefficient in that situation. An effect that is
+an exact function of the effects before it in the model (the sender and receiver effects and
+{cmd:covsnd()}, {cmd:covrec()}, {cmd:covint()}, {cmd:covevent()} are examined; for example
+{cmd:ntdegsnd} with {cmd:nodsnd} and {cmd:nidsnd}) cannot change the likelihood: {cmd:nwrem} leaves it out of the
+estimation, reports its coefficient as 0 without a standard error and lists it in {bf:e(unidentified)}. The fitted model
 reliably improves on the no-effect baseline even when a single point estimate is imprecise;
 interpret standard errors accordingly and prefer larger event counts where possible.
 
@@ -281,7 +285,7 @@ regardless of how often (contrast with {cmd:frpsndsnd} above, which is about fre
 {synopt:{bf:e(version)}}release of {cmd:nwrem} that produced the results{p_end}
 {synopt:{bf:e(title)}}"Relational event model (ordinal partial likelihood, MLE)"{p_end}
 {synopt:{bf:e(depvar)}}name of the event network fit{p_end}
-{synopt:{bf:e(unidentified)}}effects without a usable standard error (collinear with others, or a standard error above 100); empty when all are identified{p_end}
+{synopt:{bf:e(unidentified)}}effects without a usable standard error (left out because they are exactly collinear with others: coefficient 0; or a standard error above 100); empty when all are identified{p_end}
 
 {p2col 5 20 24 2: Matrices}{p_end}
 {synopt:{bf:e(b)}}coefficient vector{p_end}
@@ -307,4 +311,4 @@ the R package it was compared with in {cmd:r(reference)}, and the license in {cm
 {p 4 14 2}Help: {help nwset}, {help nwattime}, {help nwergm}, {help nwsaom}{p_end}
 
 {hline}
-{pstd}{it:nwrem version 1.1.2, 13 November 2026}{p_end}{* nwversion}
+{pstd}{it:nwrem version 1.2.0, 15 November 2026}{p_end}{* nwversion}
