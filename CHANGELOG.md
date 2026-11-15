@@ -12,7 +12,7 @@ project uses [Semantic Versioning](https://semver.org/).
 - A `covevent()` network with a missing or non-zero diagonal is read as before (the diagonal is not part of the risk set).
 - New test `test_nwrem_fast` (fast against dense evaluator for every effect, every pair, random subsets and all 16,383 subsets of a small system, with tied event times, repeated dyads and valued dyadic covariates, in one block and in small blocks of events; extreme coefficients and the fall-back; the dependence check; fits of the manufacturing e-mails against values of the previous evaluator).
 
-Tested on macOS with Stata 17 BE, Stata 18 BE and StataNow 19.5 MP (the full test suite). Not tested on Windows or Linux.
+Tested on macOS with Stata 17 BE, Stata 18 BE and StataNow 19.5 MP (the full test suite) and on Linux (Ubuntu 22.04) with StataNow 19.5 MP. Windows: not yet tested in Stata.
 
 ## [1.1.2] - 2026-11-13
 
