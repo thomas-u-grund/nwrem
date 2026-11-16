@@ -23,7 +23,7 @@ project uses [Semantic Versioning](https://semver.org/).
 ### Not implemented
 Bayesian simulation (`fit.method` MCMC and BSIR: random output that cannot be validated against R's random numbers), `sample.size` (sampling of the risk set), `simulate`, goodness-of-fit residuals and covariates that change over time (they need an event-wise data structure).
 
-Tested on: TO BE FILLED
+Tested on macOS with Stata 17 BE, Stata 18 BE and StataNow 19.5 MP (the full test suite; 60 random event logs compared with relevent). Windows and Linux: not yet tested; the plugins are built by the build workflow, and until they are rebuilt those platforms stop with return code 3495.
 
 ## [1.3.0] - 2026-11-16
 
