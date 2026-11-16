@@ -3,6 +3,28 @@
 All notable changes to nwrem are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project uses [Semantic Versioning](https://semver.org/).
 
+## [1.4.0] - 2026-11-16
+
+### Added
+- **Waiting-time (interval) likelihood**, `interval`, with `starttime()` and `endtime()` (the last interval, from the last event to the end of the observation, enters as a survival term). Event times must be strictly increasing (ties: r(459), as in relevent). Together with `condition(#)` (the first events only build the history, for both likelihoods).
+- **Triadic and shared-partner effects** `otpsnd`, `itpsnd`, `ospsnd`, `ispsnd`; **fixed effects** `fesnd`, `ferec`, `feint` (one coefficient per actor except the first); **participation shifts** `psabba`, `psabby`, `psabxa`, `psabxb`, `psabxy`, `psabay` (the six of the 13 shifts of relevent that are not always zero). All are evaluated in the plugin. `ospsnd` is the intended symmetric statistic; relevent 1.2-1 counts shared out-partners for one direction of a pair twice and for the other direction not at all, so its estimates for this effect differ (documented in `help nwrem`).
+- **Risk sets**: `riskset(netname)` (ties of 0 are pairs that can never be an event), `entry(varname)` and `exit(varname)` (per-actor windows). An event outside the risk set is an error (r(459)).
+- **Posterior mode**, `postmode` with `priormean()`, `priorscale()`, `priordf()` (independent Student t priors, as relevent's `fit.method="BPM"`; `priordf(.)` is a normal prior).
+- **Several covariates per option**: `covsnd(varlist)`, `covrec(varlist)`, `covint(varlist)`, `covevent(netlist)`; coefficients `covsnd_<variable>`, `covevent_<network>`.
+- New stored results `e(ll_0)`, `e(df_m)`, `e(deviance)`, `e(aic)`, `e(aicc)`, `e(bic)`, `e(N_cond)`, `e(lik)`, `e(starttime)`, `e(endtime)`, `e(priormean)`, `e(priorscale)`, `e(priordf)`.
+- New tests: `test_nwrem_relevent14` (60 event logs and models against reference values computed with relevent 1.2-1: the exact maximum from `rem()` on the statistics of relevent, 1e-5 in coefficients and standard errors and 1e-9 in the log likelihood, and `rem.dyad()` itself where it can fit the model, 2e-4; `dev/rem_relevent14_gen.R` makes `cscripts/ref14/`), `test_nwrem_collinear14` (the omitted coefficients of 39 tiny networks, found from relevent's statistics), `test_nwrem_options14` (error paths, stored results, identities).
+
+### Changed
+- **Collinearity check for all effects.** The check for effects that are exact functions of others now also examines `frpsndsnd`, `frrecsnd`, `rsndsnd` and `rrecsnd` and the new effects; before, those four were never omitted.
+- **Fewer plugin evaluations.** The evaluation at theta = 0 of the collinearity check serves as the null model and as the first Newton step: two likelihood evaluations fewer per fit. The row-wise sum over the sparse dyads of the evaluator was restructured. At 20,000 events and 100 actors (simulated, same machine and data, Stata 17, one fit run alone; version 1.3.0 before, 1.4.0 after): `nodsnd nidrec` 0.19 s, 0.20 s; plus `frpsndsnd` 4.5 s, 3.0 s; plus `rsndsnd` 4.5 s, 3.0 s; four degree effects plus `frpsndsnd frrecsnd` 17.5 s, 11.4 s; four degree effects plus `rsndsnd rrecsnd` 17.5 s, 11.5 s; plus a dense `covevent()` network (a third of the dyads) 3.2 s, 1.9 s. The cost per dyad of the state-dependent effects is about the same as before (6 to 7 ns per dyad and event with four degree and two state-dependent effects); the gain is the saved evaluations. Results for all earlier models are unchanged to round-off.
+- Plugin protocol 2: a plugin of version 1.3.0 is refused (r(3495)). The coefficients of dependent state-dependent effects that were previously estimated along a flat ridge are now 0 (omitted).
+- `nwrem` has no `covsnd()` error 103 for more than one variable any more (several variables are allowed).
+
+### Not implemented
+Bayesian simulation (`fit.method` MCMC and BSIR: random output that cannot be validated against R's random numbers), `sample.size` (sampling of the risk set), `simulate`, goodness-of-fit residuals and covariates that change over time (they need an event-wise data structure).
+
+Tested on: TO BE FILLED
+
 ## [1.3.0] - 2026-11-16
 
 ### Changed

@@ -1,12 +1,12 @@
 {smcl}
-{* *! version 1.3.0  16nov2026 author: Thomas Grund}{...}
+{* *! version 1.4.0  16nov2026 author: Thomas Grund}{...}
 {marker topic}
 {helpb nwtopical##analysis_dynamicmodels:[NW-2.6.8] Dynamic & Event-Based Models}
 
 {title:Title}
 
 {p2colset 9 15 22 2}{...}
-{p2col :nwrem  {hline 2}}Relational event model (ordinal partial likelihood, MLE){p_end}
+{p2col :nwrem  {hline 2}}Relational event model (ordinal or waiting-time likelihood, maximum likelihood or posterior mode){p_end}
 {p2colreset}{...}
 
 
@@ -24,12 +24,36 @@
 {opt ntdegrec}
 {opt frpsndsnd}
 {opt frrecsnd}
-{opth covsnd(varname)}
-{opth covrec(varname)}
-{opth covint(varname)}
-{opth covevent(netname)}
+{opth covsnd(varlist)}
+{opth covrec(varlist)}
+{opth covint(varlist)}
+{opth covevent(netlist)}
 {opt rsndsnd}
 {opt rrecsnd}
+{opt otpsnd}
+{opt itpsnd}
+{opt ospsnd}
+{opt ispsnd}
+{opt fesnd}
+{opt ferec}
+{opt feint}
+{opt psabba}
+{opt psabby}
+{opt psabxa}
+{opt psabxb}
+{opt psabxy}
+{opt psabay}
+{opt int:erval}
+{opt start:time(#)}
+{opt end:time(#)}
+{opt cond:ition(#)}
+{opth risk:set(netname)}
+{opth entry(varname)}
+{opth exit(varname)}
+{opt postmode}
+{opt priormean(#)}
+{opt priorscale(#)}
+{opt priordf(#)}
 {opt seed(#)}
 {opt level(#)}]
 
@@ -48,11 +72,11 @@
 {synopt:{opt frpsndsnd}}"inertia": the fraction of the sender's own past sends that went specifically to this receiver affects the sending rate to that receiver{p_end}
 {synopt:{opt frrecsnd}}"reciprocity of receipt": the fraction of the sender's own past receipts that came specifically from this receiver affects the sending rate to that receiver{p_end}
 {syntab:Covariate effects}
-{synopt:{opth covsnd(varname)}}a numeric per-actor covariate affects the sending rate (an "ego" effect - {it:varname} is read from the CURRENT dataset, one row per actor,
+{synopt:{opth covsnd(varlist)}}numeric per-actor covariates (one coefficient each) affect the sending rate (an "ego" effect - the variables are read from the CURRENT dataset, one row per actor,
 matched to the actors by their node labels - see {help nwload}'s {opt xvars} option below){p_end}
-{synopt:{opth covrec(varname)}}a numeric per-actor covariate affects the receiving rate (an "alter" effect){p_end}
-{synopt:{opth covint(varname)}}a numeric per-actor covariate affects both the sending and the receiving rate together (the same variable, one shared coefficient){p_end}
-{synopt:{opth covevent(netname)}}a pairwise (dyad-level) covariate affects the rate of the event from sender to receiver directly - {it:netname} must already be a loaded network with the SAME actors
+{synopt:{opth covrec(varlist)}}numeric per-actor covariates affect the receiving rate (an "alter" effect){p_end}
+{synopt:{opth covint(varlist)}}numeric per-actor covariates affect both the sending and the receiving rate together (the same variable, one shared coefficient){p_end}
+{synopt:{opth covevent(netlist)}}one or several pairwise (dyad-level) covariates, each affects the rate of the event from sender to receiver directly - {it:netname} must already be a loaded network with the SAME actors
 as the event network, one value per ordered (sender,receiver) pair (read from its own tie values, exactly like {help nwergm}'s {opt edgecov()}); a two-mode network is refused (error 6088) and so is a
 network with missing tie values{p_end}
 {syntab:Recency effects}
@@ -60,6 +84,34 @@ network with missing tie values{p_end}
 receivers, most recent = rank 1; 0 if never sent to before){p_end}
 {synopt:{opt rrecsnd}}"recency of receipt": how RECENTLY (not how often) the sender previously received from this receiver affects the sending rate back to that receiver (1/rank among the sender's own
 past senders, most recent = rank 1; 0 if never received from before) - a recency-based reciprocity effect{p_end}
+{syntab:Triadic and shared-partner effects}
+{synopt:{opt otpsnd}}outbound two-paths: the number of actors {it:k} to whom the sender has sent and who have sent to the receiver (as the sum over {it:k} of the smaller of the two counts) affects the sending rate{p_end}
+{synopt:{opt itpsnd}}inbound two-paths: the same count for the paths from the receiver through some {it:k} to the sender{p_end}
+{synopt:{opt ospsnd}}outbound shared partners: the number of actors to whom both sender and receiver have sent (sum over the partners of the smaller of the two counts){p_end}
+{synopt:{opt ispsnd}}inbound shared partners: the same for the actors who have sent to both sender and receiver{p_end}
+{syntab:Fixed effects}
+{synopt:{opt fesnd}}one coefficient for the sending rate of every actor except the first (the reference actor); {bf:fesnd_2}, {bf:fesnd_3} ...{p_end}
+{synopt:{opt ferec}}the same for the receiving rate{p_end}
+{synopt:{opt feint}}one coefficient per actor (except the first) that applies to the actor both as sender and as receiver{p_end}
+{syntab:Participation shifts (the previous event is A to B)}
+{synopt:{opt psabba}}the next event is the reply, B to A{p_end}
+{synopt:{opt psabby}}B sends to someone other than A{p_end}
+{synopt:{opt psabxa}}someone other than A and B sends to A{p_end}
+{synopt:{opt psabxb}}someone other than A and B sends to B{p_end}
+{synopt:{opt psabxy}}neither actor of the next event is A or B{p_end}
+{synopt:{opt psabay}}A sends again, to someone other than B{p_end}
+{syntab:Likelihood and estimation}
+{synopt:{opt interval}}waiting-time (interval) likelihood: the times between events enter the likelihood, so the model describes the rate of events and not only their order; requires strictly increasing event times{p_end}
+{synopt:{opt starttime(#)}}start of the observation, with {opt interval}; default 0{p_end}
+{synopt:{opt endtime(#)}}end of the observation, with {opt interval}; the last interval, from the last event to the end, enters as a survival term; default the time of the last event{p_end}
+{synopt:{opt condition(#)}}the first {it:#} events only build the history of the statistics and do not enter the likelihood{p_end}
+{synopt:{opth riskset(netname)}}network with the same actors; a tie value of 0 means that the ordered pair can never be an event, any other value that it can; the pairs that are not possible leave the risk set at every event{p_end}
+{synopt:{opth entry(varname)}}per-actor time of entry: before it the actor is not in the risk set (as sender or receiver); missing means present from the start{p_end}
+{synopt:{opth exit(varname)}}per-actor time of exit: after it the actor leaves the risk set; missing means present until the end{p_end}
+{synopt:{opt postmode}}posterior mode instead of maximum likelihood: independent Student t priors on all coefficients (R {cmd:relevent}'s {cmd:fit.method="BPM"}){p_end}
+{synopt:{opt priormean(#)}}location of the prior; default 0{p_end}
+{synopt:{opt priorscale(#)}}scale of the prior; default 100{p_end}
+{synopt:{opt priordf(#)}}degrees of freedom of the prior; default 4; {cmd:priordf(.)} is a normal prior{p_end}
 {syntab:}
 {synopt:{opt seed(#)}}set the random-number seed before estimation; the fit starts from zero and uses random starting values only when the Newton iteration
 does not reach a maximum (no maximum exists, or effects are not identified), so the seed makes such fits reproducible; different seeds give the same MLE up to the
@@ -76,7 +128,7 @@ convergence tolerance, except along the flat likelihood ridges described in the 
 {pstd}
 {cmd:nwrem} fits a relational event model (Butts 2008, "A Relational Event Framework for Social
 Action," {it:Sociological Methodology} 38(1), 155-200) to a timestamped sequence of dyadic
-events, via the ordinal partial likelihood: at each event, the model asks "given that some event
+events. By default it uses the ordinal partial likelihood: at each event, the model asks "given that some event
 happened next, which of the {it:n}({it:n}-1) possible ordered actor pairs was it," and estimates
 which actor-level effects make the realized event more likely relative to every other pair that
 could have happened instead - the same conditional-likelihood logic Cox proportional-hazards
@@ -150,12 +202,47 @@ are refused (error 416), and so are self-loops (error 3498); drop such rows befo
 Two-mode event networks are refused (error 198).
 
 {pstd}
-{cmd:nwrem} fits any combination of the 14 effects above (at least one required). There is
+{cmd:nwrem} fits any combination of the effects above (at least one required). There is
 deliberately no intercept option - a term constant across every candidate pair at a given event
 cancels out exactly in the ordinal likelihood's own normalization (the same reason Cox
-proportional-hazards models have no identifiable baseline intercept), so one is never estimable
-here regardless of what is requested. Not implemented: triadic/shared-partner effects,
-fixed effects, the full non-ordinal/waiting-time likelihood and Bayesian estimation.
+proportional-hazards models have no identifiable baseline intercept), and {cmd:relevent} has none
+in its waiting-time model either, so one is never estimable here regardless of what is requested.
+Not implemented: Bayesian simulation (MCMC and sampling importance resampling), sampling of the risk set,
+simulation of event sequences, goodness-of-fit residuals and covariates that change over time.
+
+{pstd}
+{bf:Waiting-time likelihood.} With {opt interval} the model is the full continuous-time model of Butts (2008): the
+rate of the pair (sender,receiver) is {it:exp}(the linear predictor), the contribution of an event is the log rate minus
+the length of the interval since the previous event times the sum of the rates over the risk set, and the time from the last
+event to {opt endtime()} contributes the corresponding survival term. The first interval starts at {opt starttime()}. Events must
+have strictly increasing times; ties are refused (error 459), as {cmd:relevent} refuses them. With {opt condition(#)}
+the first events only build the history; for the waiting-time likelihood the interval after the last of them is the
+first one that counts.
+
+{pstd}
+{bf:Risk sets.} By default every ordered pair of actors can be an event at every time. {opt riskset()} restricts the pairs
+that can occur at all (for example, only pairs within the same department), {opt entry()} and {opt exit()} restrict the actors
+that are present. An actor is present at an event whose time lies between its entry and its exit time (both ends included).
+An event of a pair that is not in the risk set is an error (459). The statistics of the effects (degrees, counts, shares,
+recency) are computed from all events as before; only the pairs over which the likelihood normalises are restricted.
+
+{pstd}
+{bf:Triadic effects.} {bf:otpsnd}, {bf:itpsnd} and {bf:ispsnd} are the statistics of {cmd:relevent}. {bf:ospsnd} is the intended
+symmetric statistic (for the sender {it:a} and the receiver {it:b}, the sum over all actors {it:l} of the smaller of the
+numbers of past events {it:a} to {it:l} and {it:b} to {it:l}). The statistic of {cmd:relevent} 1.2-1 is not symmetric: for a
+pair of actors it counts twice for one direction and not at all for the other, depending on the order in which the actors first
+appear as senders; its estimates therefore differ from those of {bf:ospsnd}.
+
+{pstd}
+{bf:Fixed effects.} {bf:fesnd}, {bf:ferec} and {bf:feint} add one coefficient per actor minus one (the first actor, in the
+order of the network, is the reference). Because they are evaluated for every pair at every event, they are slower for large
+networks; models with more than about 600 fixed-effect coefficients are refused.
+
+{pstd}
+{bf:Posterior mode.} {opt postmode} maximises the log likelihood plus the log density of independent Student t priors
+(centre {opt priormean()}, scale {opt priorscale()}, {opt priordf()} degrees of freedom), as {cmd:relevent}'s {cmd:fit.method="BPM"};
+the reported standard errors are those of the curvature of the posterior at the mode, and {cmd:e(ll)} is the log likelihood
+without the prior. With the defaults the prior is very weak.
 
 {pstd}
 {bf:rsndsnd}/{bf:rrecsnd} are different from {bf:frpsndsnd}/{bf:frrecsnd}: the latter measure HOW
@@ -218,8 +305,9 @@ converge to visibly different individual coefficients while fitting the data alm
 well; check whether the overall model fit (log likelihood) is what actually matters for your
 question before over-interpreting any single coefficient in that situation. An effect that is
 an exact function of the effects before it in the model (the sender and receiver effects and
-{cmd:covsnd()}, {cmd:covrec()}, {cmd:covint()}, {cmd:covevent()} are examined; for example
-{cmd:ntdegsnd} with {cmd:nodsnd} and {cmd:nidsnd}) cannot change the likelihood: {cmd:nwrem} leaves it out of the
+{cmd:covsnd()}, {cmd:covrec()}, {cmd:covint()}, {cmd:covevent()} and all other effects are examined; for example
+{cmd:ntdegsnd} with {cmd:nodsnd} and {cmd:nidsnd}, or any of {bf:frpsndsnd}, {bf:rsndsnd} and the fixed effects in a very small network)
+cannot change the likelihood: {cmd:nwrem} leaves it out of the
 estimation, reports its coefficient as 0 without a standard error and lists it in {bf:e(unidentified)}. The fitted model
 reliably improves on the no-effect baseline even when a single point estimate is imprecise;
 interpret standard errors accordingly and prefer larger event counts where possible.
@@ -229,7 +317,7 @@ interpret standard errors accordingly and prefer larger event counts where possi
 {marker native}{...}
 {pstd}
 Every fit runs in the compiled plugin of the package ({cmd:rem_sim}): the log likelihood, the gradient and the exact
-Hessian of all 14 effects are evaluated natively, and Mata maximises the likelihood with Newton-Raphson steps on them.
+Hessian of all effects are evaluated natively, and Mata maximises the likelihood with Newton-Raphson steps on them.
 There is no slower fallback. If the plugin file of your platform is not installed, {cmd:nwrem} stops with return code 601
 and says which file is missing; if the installed plugin is older than the {cmd:.ado} files (or cannot be loaded), it stops
 with return code 3495. Reinstall the package with {bf:net install nwrem, replace} (and restart Stata) in both cases.
@@ -296,6 +384,24 @@ ordered pairs are given explicitly - see the note on symmetry above):{p_end}
 	{cmd:. nwset i j value, name(seatdist) edgelist}
 	{cmd:. nwrem chat, nodsnd covevent(seatdist)}
 
+{pstd}Add a triadic effect (do the partners of my partners become my partners?), and the fixed effects of the senders:{p_end}
+
+	{cmd:. nwrem chat, nodsnd otpsnd}
+	{cmd:. nwrem chat, fesnd}
+
+{pstd}Use the times between the events (the waiting-time likelihood), conditioning on the first five events, with the end of the
+observation at time 12:{p_end}
+
+	{cmd:. nwrem chat, nodsnd nidrec interval endtime(12) condition(5)}
+
+{pstd}Allow only some pairs to be events, here the pairs given by the ties of a network {cmd:allowed}; {opt entry()} and {opt exit()} name per-actor variables with the times at which an actor joins and leaves:{p_end}
+
+	{cmd:. nwrem chat, nodsnd riskset(allowed)}
+
+{pstd}A posterior mode with a normal prior of scale 2 around 0:{p_end}
+
+	{cmd:. nwrem chat, nodsnd nidrec postmode priordf(.) priorscale(2)}
+
 {pstd}Add a recency effect - does a sender tend to return to whoever they contacted most recently,
 regardless of how often (contrast with {cmd:frpsndsnd} above, which is about frequency):{p_end}
 
@@ -308,12 +414,20 @@ regardless of how often (contrast with {cmd:frpsndsnd} above, which is about fre
 {p2col 5 20 24 2: Scalars}{p_end}
 {synopt:{bf:e(N)}}number of events{p_end}
 {synopt:{bf:e(nodes)}}number of actors{p_end}
-{synopt:{bf:e(ll)}}log likelihood at the MLE{p_end}
+{synopt:{bf:e(ll)}}log likelihood at the estimates (without the prior with {opt postmode}){p_end}
+{synopt:{bf:e(ll_0)}}log likelihood of the model without effects (ordinal likelihood; with {opt interval} the model of a constant rate over the complete risk set){p_end}
+{synopt:{bf:e(df_m)}}number of estimated coefficients{p_end}
+{synopt:{bf:e(deviance)}}{bf:-2*e(ll)}{p_end}
+{synopt:{bf:e(aic)}, {bf:e(aicc)}, {bf:e(bic)}}information criteria{p_end}
+{synopt:{bf:e(N_cond)}}number of events that only build the history ({opt condition()}){p_end}
+{synopt:{bf:e(starttime)}, {bf:e(endtime)}}observation window with {opt interval}{p_end}
+{synopt:{bf:e(priormean)}, {bf:e(priorscale)}, {bf:e(priordf)}}the prior with {opt postmode}{p_end}
 
 {p2col 5 20 24 2: Macros}{p_end}
 {synopt:{bf:e(cmd)}}{bf:nwrem}{p_end}
 {synopt:{bf:e(version)}}release of {cmd:nwrem} that produced the results{p_end}
-{synopt:{bf:e(title)}}"Relational event model (ordinal partial likelihood, MLE)"{p_end}
+{synopt:{bf:e(title)}}"Relational event model (" likelihood and estimator ")"{p_end}
+{synopt:{bf:e(lik)}}{bf:ordinal} or {bf:interval}{p_end}
 {synopt:{bf:e(depvar)}}name of the event network fit{p_end}
 {synopt:{bf:e(unidentified)}}effects without a usable standard error (left out because they are exactly collinear with others: coefficient 0; or a standard error above 100); empty when all are identified{p_end}
 
@@ -341,4 +455,4 @@ the R package it was compared with in {cmd:r(reference)}, and the license in {cm
 {p 4 14 2}Help: {help nwset}, {help nwattime}, {help nwergm}, {help nwsaom}{p_end}
 
 {hline}
-{pstd}{it:nwrem version 1.3.0, 16 November 2026}{p_end}{* nwversion}
+{pstd}{it:nwrem version 1.4.0, 16 November 2026}{p_end}{* nwversion}

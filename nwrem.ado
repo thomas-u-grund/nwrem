@@ -1,4 +1,4 @@
-*! version 1.3.0  16nov2026 nwrem
+*! version 1.4.0  16nov2026 nwrem
 * Copyright (C) 2026 Thomas U. Grund
 * This file is part of nwrem, a Stata package derived from the R package 'relevent' (Carter T. Butts; GPL (>= 2)).
 * nwrem is free software: you can redistribute it and/or modify it under the terms of the GNU General
@@ -344,7 +344,7 @@ program nwrem, eclass
 
 	ereturn post `b' `V', obs(`nevents')
 	ereturn local cmd "nwrem"
-	ereturn local version "1.3.0"
+	ereturn local version "1.4.0"
 	if `__nwrem_interval' local __nwrem_lik "waiting-time likelihood"
 	else local __nwrem_lik "ordinal partial likelihood"
 	if `__nwrem_prior' local __nwrem_meth "posterior mode"

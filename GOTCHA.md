@@ -115,3 +115,19 @@ The statistics are defined in `native/rem_sim.c` (`part_A/B/S`, `sval_one`, the 
 ## The fast evaluator gives up in four cases and the plugin then evaluates densely (O(n^2) per event)
 
 exp() overflow of a sparse dyadic term (sigma > 700), an underflowing normaliser, a correction that cancels more than six digits (a large negative coefficient of a dyadic effect on dyads that carry nearly all the mass) and a missing value. Result row `2 + P + P*P + P` of the plugin tells which evaluator ran (code 22 = fast only, 21 = dense only; tests use them). A fit whose iterations all take the dense route is slow at large n; nothing is wrong with it.
+
+## Mata: `a :/ b / c` divides by `b / c` (the scalar `/` binds tighter than `:/`)
+
+The prior gradient `(nu + 1) :* z :/ (nu :+ z :^ 2) / sc` was `... :/ ((nu :+ z^2) / sc)`: wrong by a factor of sc^2, the t prior then made the Newton iteration fail ("flat region", r(430)) only for scale 100 and not for the normal prior. Put parentheses round the whole vector expression before dividing by a scalar.
+
+## relevent 1.2-1 `OSPSnd` is asymmetric: nwrem's `ospsnd` deliberately differs
+
+For a pair (a,b) with a earlier in the order of first appearance as sender, relevent counts 2 * sum_l min(c[a,l], c[b,l]) and the reverse direction gets 0 (reproduced exactly by emulation). `ospsnd` of nwrem is the symmetric statistic, so the cross-check of this effect uses relevent's `rem()` (statistics supplied by us) and not `rem.dyad()`. OTP, ITP and ISP agree with relevent exactly.
+
+## How the references of `cscripts/ref14/` are made (`dev/rem_relevent14_gen.R`)
+
+`rem.dyad()` stops at BFGS tolerances (coefficients to the fifth to sixth digit, standard errors to the fourth), so the tight check is `rem()` of relevent (trust-region optimiser, analytic derivatives) on the statistics built with `rem.dyad.lambda()` and unit parameter vectors. `rem.dyad.lambda()` is 1-based in the iteration and takes the accumulated list of that iteration (`acl[[i]]`). `rem()` needs a 0/1 support matrix per event: that is how risk sets and entry/exit windows are cross-checked (rem.dyad has none). relevent numbers the covariates of an effect by position (`covsnd_x1`, `covsnd_x2`); the generator renames them to nwrem's `covsnd_<variable>`. Regenerate with `Rscript dev/rem_relevent14_gen.R` from the repository root (needs the R package relevent 1.2-1); the cases are fully determined by the seeds.
+
+## The plugin's evaluation at theta = 0 is used three times
+
+`rem_nat_dependent_par()` keeps the log likelihood, gradient and Hessian of the evaluation at theta = 0 (`RemNat.cy/cg/cH`); `RemFitX` uses them as `ll0` (ordinal) and `rem_newton()` as its first iterate when the start is 0 (the sub-block of the kept parameters, plus the prior's terms with `postmode`). If a change makes the first Newton step depend on anything else (a different start, a changed blob), clear `cached`.
