@@ -23,12 +23,83 @@ program nwrem, eclass
 			exit
 		}
 	}
-	syntax [anything(name=netname)] [, NODSND NIDREC NIDSND NODREC NTDEGSND NTDEGREC FRPSNDSND FRRECSND COVSND(varname numeric) COVREC(varname numeric) COVINT(varname numeric) COVEVENT(string) RSNDSND RRECSND SEED(string) Level(cilevel)]
+	syntax [anything(name=netname)] [, NODSND NIDREC NIDSND NODREC NTDEGSND NTDEGREC FRPSNDSND FRRECSND COVSND(varlist numeric) COVREC(varlist numeric) COVINT(varlist numeric) COVEVENT(string) RSNDSND RRECSND ///
+		OTPSND ITPSND OSPSND ISPSND FESND FEREC FEINT PSABBA PSABBY PSABXA PSABXB PSABXY PSABAY ///
+		INTerval STARTtime(string) ENDtime(string) CONDition(string) RISKset(string) ENTRY(varname numeric) EXIT(varname numeric) ///
+		POSTmode PRIORMean(string) PRIORScale(string) PRIORDf(string) SEED(string) Level(cilevel)]
 	if `"`seed'"' != "" {
 		capture confirm integer number `seed'
 		if _rc | real(`"`seed'"') < 0 | real(`"`seed'"') > 2147483647 {
 			di as error "seed() must be an integer between 0 and 2147483647"
 			error 198
+		}
+	}
+	// likelihood, conditioning, prior
+	local __nwrem_interval = ("`interval'" != "")
+	if !`__nwrem_interval' & (`"`starttime'"' != "" | `"`endtime'"' != "") {
+		di as error "{p 0 0 2}starttime() and endtime() belong to the waiting-time likelihood: add the option {bf:interval}.{p_end}"
+		error 198
+	}
+	local __nwrem_start = 0
+	if `"`starttime'"' != "" {
+		capture confirm number `starttime'
+		if _rc {
+			di as error "starttime() must be a number"
+			error 198
+		}
+		local __nwrem_start = `starttime'
+	}
+	local __nwrem_end = .
+	if `"`endtime'"' != "" {
+		capture confirm number `endtime'
+		if _rc {
+			di as error "endtime() must be a number"
+			error 198
+		}
+		local __nwrem_end = `endtime'
+	}
+	local __nwrem_cond = 0
+	if `"`condition'"' != "" {
+		capture confirm integer number `condition'
+		if _rc | real(`"`condition'"') < 0 {
+			di as error "condition() must be a non-negative integer (the number of leading events that only build the history)"
+			error 198
+		}
+		local __nwrem_cond = `condition'
+	}
+	local __nwrem_prior = ("`postmode'" != "")
+	if !`__nwrem_prior' & (`"`priormean'"' != "" | `"`priorscale'"' != "" | `"`priordf'"' != "") {
+		di as error "{p 0 0 2}priormean(), priorscale() and priordf() belong to posterior-mode estimation: add the option {bf:postmode}.{p_end}"
+		error 198
+	}
+	local __nwrem_pmean = 0
+	local __nwrem_pscale = 100
+	local __nwrem_pdf = 4
+	if `"`priormean'"' != "" {
+		capture confirm number `priormean'
+		if _rc {
+			di as error "priormean() must be a number"
+			error 198
+		}
+		local __nwrem_pmean = `priormean'
+	}
+	if `"`priorscale'"' != "" {
+		capture confirm number `priorscale'
+		if _rc | real(`"`priorscale'"') <= 0 {
+			di as error "priorscale() must be a positive number"
+			error 198
+		}
+		local __nwrem_pscale = `priorscale'
+	}
+	if `"`priordf'"' != "" {
+		if `"`priordf'"' == "." local __nwrem_pdf = .
+		else {
+			capture confirm number `priordf'
+			if _rc | real(`"`priordf'"') <= 0 {
+				di as error "priordf() must be a positive number, or . for a normal prior"
+				error 198
+			}
+			local __nwrem_pdf = `priordf'
 		}
 	}
 	set more off
@@ -46,29 +117,20 @@ program nwrem, eclass
 		error 198
 	}
 
-	// Fixed effect order of RemFitMulti() (unw_rem.do). At least one
-	// effect must be selected; no default is silently assumed.
-	local __nwrem_effnames "nodsnd nidrec nidsnd nodrec ntdegsnd ntdegrec frpsndsnd frrecsnd covsnd covrec covint covevent rsndsnd rrecsnd"
+	// Fixed effect order of RemFitX() (unw_rem.do); the covariate effects stand for one parameter per variable (network), the
+	// fixed effects for one parameter per actor from the second on. At least one effect must be selected; no default is
+	// silently assumed.
+	local __nwrem_effnames "nodsnd nidrec nidsnd nodrec ntdegsnd ntdegrec frpsndsnd frrecsnd covsnd covrec covint covevent rsndsnd rrecsnd otpsnd itpsnd ospsnd ispsnd fesnd ferec feint psabba psabby psabxa psabxb psabxy psabay"
 	local __nwrem_active ""
 	local __nwrem_sep ""
 	local __nwrem_collabs ""
 	local __nwrem_nactive = 0
+	local __nwrem_nfe = 0
 	foreach __nwrem_e of local __nwrem_effnames {
 		if "``__nwrem_e''" != "" {
 			local __nwrem_active "`__nwrem_active'`__nwrem_sep'1"
-			// covsnd()/covrec()/covint() are valued options (a variable
-			// name), the other 8 are booleans - label with the variable
-			// for the covariate trio (matching nwsaom's own
-			// nodecov_`varname' convention) so e(b) shows which
-			// variable was used, not just the generic effect name.
-			if inlist("`__nwrem_e'", "covsnd", "covrec", "covint", "covevent") {
-				// matrix column names have at most 32 characters: longer names are cut
-				local __nwrem_collabs "`__nwrem_collabs' `=substr("`__nwrem_e'_``__nwrem_e''", 1, 32)'"
-			}
-			else {
-				local __nwrem_collabs "`__nwrem_collabs' `__nwrem_e'"
-			}
 			local __nwrem_nactive = `__nwrem_nactive' + 1
+			if inlist("`__nwrem_e'", "fesnd", "ferec", "feint") local __nwrem_nfe = `__nwrem_nfe' + 1
 		}
 		else {
 			local __nwrem_active "`__nwrem_active'`__nwrem_sep'0"
@@ -76,15 +138,22 @@ program nwrem, eclass
 		local __nwrem_sep ","
 	}
 	if `__nwrem_nactive' == 0 {
-		di as error "{p 0 0 2}nwrem requires at least one effect: {bf:nodsnd} {bf:nidrec} {bf:nidsnd} {bf:nodrec} {bf:ntdegsnd} {bf:ntdegrec} {bf:frpsndsnd} {bf:frrecsnd} {bf:covsnd()} {bf:covrec()} {bf:covint()} {bf:covevent()} {bf:rsndsnd} {bf:rrecsnd} (see {help nwrem} for what each computes).{p_end}"
+		di as error "{p 0 0 2}nwrem requires at least one effect: {bf:nodsnd} {bf:nidrec} {bf:nidsnd} {bf:nodrec} {bf:ntdegsnd} {bf:ntdegrec} {bf:frpsndsnd} {bf:frrecsnd} {bf:covsnd()} {bf:covrec()} {bf:covint()} {bf:covevent()} {bf:rsndsnd} {bf:rrecsnd} {bf:otpsnd} {bf:itpsnd} {bf:ospsnd} {bf:ispsnd} {bf:fesnd} {bf:ferec} {bf:feint} {bf:psabba} {bf:psabby} {bf:psabxa} {bf:psabxb} {bf:psabxy} {bf:psabay} (see {help nwrem} for what each computes).{p_end}"
+		error 198
+	}
+	if `__nwrem_nfe' > 0 & `nodes' * `__nwrem_nfe' > 600 {
+		di as error "{p 0 0 2}the fixed effects add `=`nodes'-1' parameters per effect; with `nodes' actors that is too many (at most about 600 parameters in all).{p_end}"
+		error 198
+	}
+	if `__nwrem_cond' >= . | `__nwrem_cond' < 0 {
 		error 198
 	}
 
-	// Per-actor covariates are read from the current dataset. When it carries the node labels (variable _nwnode, as after
-	// nwload, xvars), every actor of the network is matched to its row by label, whatever the sort order; otherwise
-	// the data must have one row per actor, in actor order.
-	tempname __nwrem_covsnd __nwrem_covrec __nwrem_covint __nwrem_rows
-	if "`covsnd'`covrec'`covint'" != "" {
+	// Per-actor variables (covariates, entry and exit times) are read from the current dataset. When it carries the node
+	// labels (variable _nwnode, as after nwload, xvars), every actor of the network is matched to its row by label, whatever the
+	// sort order; otherwise the data must have one row per actor, in actor order.
+	tempname __nwrem_rows __nwrem_CS __nwrem_CR __nwrem_CI __nwrem_entry __nwrem_exit
+	if "`covsnd'`covrec'`covint'`entry'`exit'" != "" {
 		unw_defs
 		capture confirm string variable `nw_nodename'
 		if !_rc {
@@ -112,46 +181,96 @@ program nwrem, eclass
 			mata: `__nwrem_rows' = (1::`nodes')
 		}
 	}
-	foreach __nwrem_cv in covsnd covrec covint {
-		if "``__nwrem_cv''" != "" {
-			mata: `__nwrem_`__nwrem_cv'' = st_data(`__nwrem_rows', "``__nwrem_cv''")'
-			mata: st_local("__nwrem_nmiss", strofreal(missing(`__nwrem_`__nwrem_cv'')))
+	else {
+		mata: `__nwrem_rows' = (1::`nodes')
+	}
+	mata: `__nwrem_CS' = J(0, `nodes', .)
+	mata: `__nwrem_CR' = J(0, `nodes', .)
+	mata: `__nwrem_CI' = J(0, `nodes', .)
+	foreach __nwrem_cvset in "covsnd:CS" "covrec:CR" "covint:CI" {
+		gettoken __nwrem_cv __nwrem_cvm : __nwrem_cvset, parse(":")
+		local __nwrem_cvm = substr("`__nwrem_cvm'", 2, .)
+		foreach __nwrem_var of local `__nwrem_cv' {
+			mata: `__nwrem_`__nwrem_cvm'' = (`__nwrem_`__nwrem_cvm'' \ st_data(`__nwrem_rows', "`__nwrem_var'")')
+			mata: st_local("__nwrem_nmiss", strofreal(missing(st_data(`__nwrem_rows', "`__nwrem_var'"))))
 			if `__nwrem_nmiss' > 0 {
-				capture mata: mata drop `__nwrem_rows' `__nwrem_covsnd' `__nwrem_covrec' `__nwrem_covint'
-				di as error "{p 0 0 2}`__nwrem_cv'(``__nwrem_cv''): `__nwrem_nmiss' actor(s) of `netname' have a missing value; the covariate must be defined for every actor.{p_end}"
+				capture mata: mata drop `__nwrem_rows' `__nwrem_CS' `__nwrem_CR' `__nwrem_CI'
+				di as error "{p 0 0 2}`__nwrem_cv'(`__nwrem_var'): `__nwrem_nmiss' actor(s) of `netname' have a missing value; the covariate must be defined for every actor.{p_end}"
 				error 416
 			}
+			local __nwrem_collabs "`__nwrem_collabs' `=substr("`__nwrem_cv'_`__nwrem_var'", 1, 32)'"
 		}
-		else {
-			mata: `__nwrem_`__nwrem_cv'' = J(1, `nodes', 0)
-		}
+	}
+	mata: `__nwrem_entry' = J(0, 1, .)
+	mata: `__nwrem_exit' = J(0, 1, .)
+	if "`entry'`exit'" != "" {
+		if "`entry'" != "" mata: `__nwrem_entry' = st_data(`__nwrem_rows', "`entry'")
+		else mata: `__nwrem_entry' = J(`nodes', 1, .)
+		if "`exit'" != "" mata: `__nwrem_exit' = st_data(`__nwrem_rows', "`exit'")
+		else mata: `__nwrem_exit' = J(`nodes', 1, .)
 	}
 	capture mata: mata drop `__nwrem_rows'
 
-	// covevent() references ANOTHER already-loaded network (a pairwise,
-	// not per-actor, covariate) - resolved via _nwsyntax exactly as
-	// nwergm's own edgecov()/hamming() do (nwergm.ado's dyadic-covariate
-	// block), using other() so its locals (covevnetobj/covevnodes) don't
-	// clobber `netobj'/`nodes' from the primary network above.
-	tempname __nwrem_covevmat
-	if "`covevent'" != "" {
-		_nwsyntax `covevent', max(1) other(covev)
+	// covevent() and riskset() reference ANOTHER already-loaded network (a pairwise, not per-actor, covariate) - resolved via
+	// _nwsyntax exactly as nwergm's own edgecov()/hamming() do (nwergm.ado's dyadic-covariate block), using other() so its
+	// locals (covevnetobj/covevnodes) don't clobber `netobj'/`nodes' from the primary network above.
+	tempname __nwrem_covevmat __nwrem_mask
+	mata: `__nwrem_covevmat' = J(`nodes', 0, .)
+	mata: `__nwrem_mask' = J(0, 0, .)
+	foreach __nwrem_cvn of local covevent {
+		_nwsyntax `__nwrem_cvn', max(1) other(covev)
 		// a two-mode covariate network has missing cells between nodes of the same mode (core >= 3.6.0 rule: refused with error 6088)
-		_nw2guard `covevent', cmd(nwrem covevent())
+		_nw2guard `__nwrem_cvn', cmd(nwrem covevent())
 		if `covevnodes' != `nodes' {
-			di as error "{p 0 0 2}covevent() network `covevent' has `covevnodes' actors but `netname' has `nodes' - covevent() requires the same actors as `netname'.{p_end}"
+			di as error "{p 0 0 2}covevent() network `__nwrem_cvn' has `covevnodes' actors but `netname' has `nodes' - covevent() requires the same actors as `netname'.{p_end}"
 			error 198
 		}
-		mata: `__nwrem_covevmat' = *(`covevnetobj'->get_matrix_mod(1,1))
-		mata: st_local("__nwrem_covmiss", strofreal(missing(`__nwrem_covevmat') - missing(diagonal(`__nwrem_covevmat'))))
+		mata: `__nwrem_covevmat' = (`__nwrem_covevmat', *(`covevnetobj'->get_matrix_mod(1,1)))
+		mata: st_local("__nwrem_covmiss", strofreal(missing(`__nwrem_covevmat'[., (cols(`__nwrem_covevmat') - `nodes' + 1)..cols(`__nwrem_covevmat')]) - missing(diagonal(`__nwrem_covevmat'[., (cols(`__nwrem_covevmat') - `nodes' + 1)..cols(`__nwrem_covevmat')]))))
 		if `__nwrem_covmiss' > 0 {
-			di as error "{p 0 0 2}covevent() network `covevent' has `__nwrem_covmiss' missing tie values; the covariate must be defined for every ordered pair of actors.{p_end}"
+			di as error "{p 0 0 2}covevent() network `__nwrem_cvn' has `__nwrem_covmiss' missing tie values; the covariate must be defined for every ordered pair of actors.{p_end}"
 			error 416
 		}
+		local __nwrem_collabs "`__nwrem_collabs' `=substr("covevent_`__nwrem_cvn'", 1, 32)'"
 	}
-	else {
-		mata: `__nwrem_covevmat' = J(`nodes', `nodes', 0)
+	if `"`riskset'"' != "" {
+		_nwsyntax `riskset', max(1) other(covev)
+		_nw2guard `riskset', cmd(nwrem riskset())
+		if `covevnodes' != `nodes' {
+			di as error "{p 0 0 2}riskset() network `riskset' has `covevnodes' actors but `netname' has `nodes' - riskset() requires the same actors as `netname'.{p_end}"
+			error 198
+		}
+		mata: `__nwrem_mask' = *(`covevnetobj'->get_matrix_mod(1,1))
+		mata: st_local("__nwrem_covmiss", strofreal(missing(`__nwrem_mask') - missing(diagonal(`__nwrem_mask'))))
+		if `__nwrem_covmiss' > 0 {
+			di as error "{p 0 0 2}riskset() network `riskset' has `__nwrem_covmiss' missing tie values; every ordered pair of actors must be 0 (cannot occur) or non-zero (can occur).{p_end}"
+			error 416
+		}
+		mata: `__nwrem_mask' = (`__nwrem_mask' :!= 0)
 	}
+
+	// the coefficient labels, in the order of the parameters
+	local __nwrem_labs ""
+	foreach __nwrem_e of local __nwrem_effnames {
+		if "``__nwrem_e''" == "" continue
+		if inlist("`__nwrem_e'", "covsnd", "covrec", "covint") {
+			foreach __nwrem_var of local `__nwrem_e' {
+				local __nwrem_labs "`__nwrem_labs' `=substr("`__nwrem_e'_`__nwrem_var'", 1, 32)'"
+			}
+		}
+		else if "`__nwrem_e'" == "covevent" {
+			foreach __nwrem_cvn of local covevent {
+				local __nwrem_labs "`__nwrem_labs' `=substr("covevent_`__nwrem_cvn'", 1, 32)'"
+			}
+		}
+		else if inlist("`__nwrem_e'", "fesnd", "ferec", "feint") {
+			forvalues __nwrem_a = 2/`nodes' {
+				local __nwrem_labs "`__nwrem_labs' `__nwrem_e'_`__nwrem_a'"
+			}
+		}
+		else local __nwrem_labs "`__nwrem_labs' `__nwrem_e'"
+	}
+	local __nwrem_collabs "`__nwrem_labs'"
 
 	if `"`seed'"' != "" {
 		set seed `seed'
@@ -168,7 +287,7 @@ program nwrem, eclass
 	mata: st_local("__nwrem_bad0", strofreal(sum((`__nwrem_events'[., 1] :< 1) :| (`__nwrem_events'[., 2] :< 1) :| missing(`__nwrem_events'[., 1]) :| missing(`__nwrem_events'[., 2]))))
 	mata: st_local("__nwrem_badt", strofreal(missing(`__nwrem_events'[., 3])))
 	if `__nwrem_bad0' > 0 | `__nwrem_badt' > 0 {
-		capture mata: mata drop `__nwrem_events' `__nwrem_covsnd' `__nwrem_covrec' `__nwrem_covint' `__nwrem_covevmat'
+		capture mata: mata drop `__nwrem_events' `__nwrem_CS' `__nwrem_CR' `__nwrem_CI' `__nwrem_covevmat' `__nwrem_mask' `__nwrem_entry' `__nwrem_exit'
 		if `__nwrem_bad0' > 0 {
 			di as error "{p 0 0 2}`__nwrem_bad0' event(s) of `netname' have a sender or receiver that is not an actor of the network (a missing actor id, or an id that does not match a node label); drop these events before {cmd:nwset}.{p_end}"
 		}
@@ -179,22 +298,30 @@ program nwrem, eclass
 	}
 
 	if `nevents' < 2 {
+		capture mata: mata drop `__nwrem_events' `__nwrem_CS' `__nwrem_CR' `__nwrem_CI' `__nwrem_covevmat' `__nwrem_mask' `__nwrem_entry' `__nwrem_exit'
 		di as error "nwrem needs at least 2 events to fit a model; `netname' has `nevents'."
 		error 2001
+	}
+	if `__nwrem_cond' >= `nevents' {
+		capture mata: mata drop `__nwrem_events' `__nwrem_CS' `__nwrem_CR' `__nwrem_CI' `__nwrem_covevmat' `__nwrem_mask' `__nwrem_entry' `__nwrem_exit'
+		di as error "condition() must be smaller than the number of events (`nevents')."
+		error 198
 	}
 
 	// the fit runs in the compiled plugin (it writes the model into the frame __nwrem_native and leaves the current frame
 	// as it was); an error inside the fit must not leave that frame behind
 	local __nwrem_frame = c(frame)
-	capture noisily mata: RemFitMulti(`__nwrem_events', `nodes', (`__nwrem_active'), `__nwrem_covsnd', `__nwrem_covrec', `__nwrem_covint', `__nwrem_covevmat', "__nwrem_b", "__nwrem_V", "__nwrem_ll")
+	capture noisily mata: RemFitX(`__nwrem_events', `nodes', (`__nwrem_active'), `__nwrem_CS', `__nwrem_CR', `__nwrem_CI', `__nwrem_covevmat', `__nwrem_mask', `__nwrem_entry', `__nwrem_exit', (`__nwrem_interval', `__nwrem_cond', `__nwrem_start', `__nwrem_end', `__nwrem_prior', `__nwrem_pmean', `__nwrem_pscale', `__nwrem_pdf'), "__nwrem_")
 	local __nwrem_rc = _rc
 	if "`c(frame)'" != "`__nwrem_frame'" quietly frame change `__nwrem_frame'
 	capture frame drop __nwrem_native
-	capture mata: mata drop `__nwrem_events' `__nwrem_covsnd' `__nwrem_covrec' `__nwrem_covint' `__nwrem_covevmat'
+	capture mata: mata drop `__nwrem_events' `__nwrem_CS' `__nwrem_CR' `__nwrem_CI' `__nwrem_covevmat' `__nwrem_mask' `__nwrem_entry' `__nwrem_exit'
 	if `__nwrem_rc' {
 		capture matrix drop __nwrem_b
 		capture matrix drop __nwrem_V
 		capture scalar drop __nwrem_ll
+		capture scalar drop __nwrem_ll0
+		capture scalar drop __nwrem_df
 		exit `__nwrem_rc'
 	}
 
@@ -205,17 +332,52 @@ program nwrem, eclass
 	matrix colnames `V' = `__nwrem_collabs'
 	matrix rownames `V' = `__nwrem_collabs'
 	local __nwrem_ll = __nwrem_ll
+	local __nwrem_ll0 = __nwrem_ll0
+	local __nwrem_df = __nwrem_df
 	matrix drop __nwrem_b __nwrem_V
-	scalar drop __nwrem_ll
+	scalar drop __nwrem_ll __nwrem_ll0 __nwrem_df
+
+	// the number of events that enter the likelihood (conditioned events only build the history)
+	local __nwrem_meff = `nevents' - `__nwrem_cond'
+	local __nwrem_kpar = colsof(`b')
+	local __nwrem_dev = -2 * `__nwrem_ll'
 
 	ereturn post `b' `V', obs(`nevents')
 	ereturn local cmd "nwrem"
 	ereturn local version "1.3.0"
-	ereturn local title "Relational event model (ordinal partial likelihood, MLE)"
+	if `__nwrem_interval' local __nwrem_lik "waiting-time likelihood"
+	else local __nwrem_lik "ordinal partial likelihood"
+	if `__nwrem_prior' local __nwrem_meth "posterior mode"
+	else local __nwrem_meth "MLE"
+	ereturn local title "Relational event model (`__nwrem_lik', `__nwrem_meth')"
+	ereturn local lik = cond(`__nwrem_interval', "interval", "ordinal")
 	ereturn local depvar "`netname'"
 	ereturn scalar N = `nevents'
 	ereturn scalar nodes = `nodes'
 	ereturn scalar ll = `__nwrem_ll'
+	ereturn scalar deviance = `__nwrem_dev'
+	if !missing(`__nwrem_ll0') {
+		ereturn scalar ll_0 = `__nwrem_ll0'
+	}
+	ereturn scalar df_m = `__nwrem_df'
+	ereturn scalar N_cond = `__nwrem_cond'
+	ereturn scalar aic = `__nwrem_dev' + 2 * `__nwrem_df'
+	local __nwrem_meff2 = `__nwrem_meff' - `__nwrem_interval'
+	if `__nwrem_meff2' - `__nwrem_df' - 1 > 0 {
+		ereturn scalar aicc = e(aic) + 2 * `__nwrem_df' * (`__nwrem_df' + 1) / (`__nwrem_meff2' - `__nwrem_df' - 1)
+	}
+	if `__nwrem_meff2' > 0 {
+		ereturn scalar bic = `__nwrem_dev' + `__nwrem_df' * ln(`__nwrem_meff2')
+	}
+	if `__nwrem_interval' {
+		ereturn scalar starttime = `__nwrem_start'
+		if !missing(`__nwrem_end') ereturn scalar endtime = `__nwrem_end'
+	}
+	if `__nwrem_prior' {
+		ereturn scalar priormean = `__nwrem_pmean'
+		ereturn scalar priorscale = `__nwrem_pscale'
+		ereturn scalar priordf = `__nwrem_pdf'
+	}
 
 	// effects without a usable standard error: exactly collinear with other effects in the model (for example the
 	// total-degree share ntdegsnd = (nodsnd + nidsnd)/2), or not identified by the data
@@ -238,7 +400,7 @@ capture program drop _nwrem_display
 program _nwrem_display
 	syntax [, Level(cilevel)]
 	di as text "{hline 60}"
-	di as text "Relational event model (ordinal partial likelihood, MLE)"
+	di as text "`e(title)'"
 	di as text "Network: " as result "`e(depvar)'" _col(40) as text "Actors: " as result e(nodes)
 	di as text "Events: " as result e(N) _col(40) as text "Log likelihood: " as result %9.4f e(ll)
 	di as text "{hline 60}"

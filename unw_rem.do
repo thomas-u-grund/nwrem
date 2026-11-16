@@ -34,6 +34,10 @@ capture mata: mata drop rem_nat_eval()
 capture mata: mata drop rem_nat_eval_d1()
 capture mata: mata drop rem_newton()
 capture mata: mata drop rem_nat_dependent()
+capture mata: mata drop rem_nat_dependent_par()
+capture mata: mata drop rem_nat_prior()
+capture mata: mata drop rem_event_dt()
+capture mata: mata drop RemFitX()
 capture mata: mata drop rem_nat_optimize()
 capture mata: mata drop RemFitMulti()
 
@@ -110,7 +114,7 @@ real scalar RemNativeAvailable()
 	return(fileexists(p))
 }
 
-real scalar REM_PROTOCOL_NEEDED() return(1)
+real scalar REM_PROTOCOL_NEEDED() return(2)
 
 /*
 	The events sorted by time. Events with the SAME time keep the order in which the network lists them (the row number is the
@@ -134,9 +138,9 @@ real matrix rem_sorted_events(real matrix rawevents)
 }
 
 /*
-	NATIVE ENGINE. class RemNat writes the model (events, covariates) once per fit into the frame __nwrem_native (variable v1,
-	the "blob"; layout in the header of native/rem_sim.c); rem_nat_eval() is the evaluator: one plugin call per evaluation,
-	only theta travels (at full double precision), the result (log likelihood, gradient, Hessian) comes back in v2.
+	NATIVE ENGINE. class RemNat writes the model (events, covariates, risk set) once per fit into the frame __nwrem_native
+	(variable v1, the "blob"; layout in the header of native/rem_sim.c); rem_nat_eval() is the evaluator: one plugin call per
+	evaluation, only theta travels (at full double precision), the result (log likelihood, gradient, Hessian) comes back in v2.
 	The plugin must exist and speak the protocol of this package (RemNat::open() asks it with code 99):
 	  r(601)  the plugin file for this platform is not installed
 	  r(3495) the installed plugin is too old for this version of nwrem (or cannot be loaded)
@@ -144,13 +148,18 @@ real matrix rem_sorted_events(real matrix rawevents)
 class RemNat {
 	real scalar L        // length of the blob
 	real scalar Pt       // number of parameters of the model now in the blob
+	real scalar Pall     // number of parameters of the full model (before the dependent ones are dropped)
 	real scalar isopen
+	real scalar prior    // 1 = posterior mode: the t (or normal) prior of relevent is added to the log likelihood
+	real scalar pmean, pscale, pdf
+	real colvector blob0 // the blob without a drop mask
 	string scalar origframe
 
 	void open()
 	void close()
 	void setup()
-	void setactive()
+	void setupx()
+	void setdrop()
 }
 
 void RemNat::open()
@@ -159,6 +168,7 @@ void RemNat::open()
 	real scalar rc, junk, ver
 
 	isopen = 0
+	prior = 0
 	fname = RemNativePluginFilename()
 	p = RemNativePluginPath()
 	if (p == "" | !fileexists(p)) {
@@ -196,41 +206,120 @@ void RemNat::close()
 }
 
 /*
-	setup(): ev = sorted events (sender, receiver, ...), n actors, active = 1 x 14 flags, covariates (1 x n each) and the
-	n x n matrix of covevent (the diagonal is not part of the risk set and is set to 0).
+	setupx(): ev = sorted events (sender, receiver, time since the previous event), n actors, active = 1 x 27 flags (the
+	flags of the covariate effects 9 to 12 must agree with the number of columns of CS, CR, CI, CE), mode 0 = ordinal
+	likelihood, 1 = interval likelihood, ncond = number of conditioned events, dtc = length of the final (censored) interval,
+	CS, CR, CI = one covariate per row (n columns), CE = n x (n * number of covariate networks) (the diagonal is not part of
+	the risk set and is set to 0), mask = n x n 0/1 matrix of the dyads that can occur (J(0,0,.) = all), win = 2 x n first
+	and last event number at which an actor is in the risk set (J(0,0,.) = always).
 */
-void RemNat::setup(real matrix ev, real scalar n, real rowvector active, real rowvector cs, real rowvector cr,
-		real rowvector ci, real matrix C)
+void RemNat::setupx(real matrix ev, real scalar n, real rowvector active, real scalar mode, real scalar ncond,
+		real scalar dtc, real matrix CS, real matrix CR, real matrix CI, real matrix CE, real matrix mask, real matrix win)
 {
-	real scalar nev, k
-	real colvector blob
+	real scalar nev, k, ncs, ncr, nci, nce, c, need
 	real rowvector hdr
 	real matrix Cz
 
 	nev = rows(ev)
-	hdr = (REM_PROTOCOL_NEEDED(), n, nev, active, J(1, 7, 0))
-	blob = hdr' \ vec(ev[., (1, 2)]') \ cs' \ cr' \ ci'
-	if (active[12]) {
-		Cz = C
+	ncs = rows(CS)
+	ncr = rows(CR)
+	nci = rows(CI)
+	nce = (rows(CE) == n ? cols(CE) / n : 0)
+	hdr = J(1, 48, 0)
+	hdr[1] = REM_PROTOCOL_NEEDED()
+	hdr[2] = n
+	hdr[3] = nev
+	hdr[4] = mode
+	hdr[5] = ncond
+	hdr[6] = dtc
+	hdr[7] = ncs
+	hdr[8] = ncr
+	hdr[9] = nci
+	hdr[10] = nce
+	hdr[11] = (rows(mask) > 0)
+	hdr[12] = (rows(win) > 0)
+	hdr[13] = 0
+	hdr[17..43] = active
+	blob0 = hdr' \ vec(ev[., (1, 2, 3)]')
+	if (ncs > 0) blob0 = blob0 \ vec(CS')
+	if (ncr > 0) blob0 = blob0 \ vec(CR')
+	if (nci > 0) blob0 = blob0 \ vec(CI')
+	for (c = 1; c <= nce; c++) {
+		Cz = CE[., ((c - 1) * n + 1)..(c * n)]
 		for (k = 1; k <= n; k++) Cz[k, k] = 0
 		if (hasmissing(Cz)) {
 			close()
 			errprintf("{p 0 0 2}nwrem: covevent() has missing values.{p_end}\n")
 			exit(416)
 		}
-		blob = blob \ vec(Cz')
+		blob0 = blob0 \ vec(Cz')
 	}
+	if (rows(mask) > 0) blob0 = blob0 \ vec(mask')
+	if (rows(win) > 0) blob0 = blob0 \ vec(win')
+	blob = blob0
 	L = rows(blob)
-	Pt = sum(active)
-	if (max((L, 230)) > st_nobs()) st_addobs(max((L, 230)) - st_nobs())
+	Pall = sum(active[1..8]) + ncs * active[9] + ncr * active[10] + nci * active[11] + nce * active[12] + sum(active[13..18]) + (n - 1) * sum(active[19..21]) + sum(active[22..27])
+	Pt = Pall
+	need = max((L, 4 + 2 * Pall + Pall * Pall, 230))
+	if (need > st_nobs()) st_addobs(need - st_nobs())
 	st_store((1::L), 1, blob)
 }
 
-// the active flags of the model (header cells 4 to 17 of the blob)
-void RemNat::setactive(real rowvector active)
+// the model of nwrem 1.3 (14 effects, one covariate per effect, ordinal likelihood, complete risk set)
+void RemNat::setup(real matrix ev, real scalar n, real rowvector active, real rowvector cs, real rowvector cr,
+		real rowvector ci, real matrix C)
 {
-	st_store((4::17), 1, active')
-	Pt = sum(active)
+	real matrix CS, CR, CI, CE
+	real rowvector act27
+
+	act27 = (active, J(1, 13, 0))
+	CS = (active[9] ? cs : J(0, n, .))
+	CR = (active[10] ? cr : J(0, n, .))
+	CI = (active[11] ? ci : J(0, n, .))
+	CE = (active[12] ? C : J(n, 0, .))
+	setupx((ev[., (1, 2)], J(rows(ev), 1, 0)), n, act27, 0, 0, 0, CS, CR, CI, CE, J(0, 0, .), J(0, 0, .))
+}
+
+// leave the parameters with dropflag = 1 (a 1 x Pall vector) out of the model
+void RemNat::setdrop(real rowvector dropall)
+{
+	real colvector b2
+
+	b2 = blob0
+	b2[13] = 1
+	b2 = b2 \ dropall'
+	L = rows(b2)
+	Pt = Pall - sum(dropall)
+	if (L > st_nobs()) st_addobs(L - st_nobs())
+	st_store((1::L), 1, b2)
+}
+
+/*
+	The prior of posterior-mode estimation (relevent's fit.method = "BPM"): independent t distributions with df degrees of
+	freedom (a normal distribution when df is missing), location mean and scale scale for every coefficient. Returns the log
+	density summed over theta and adds its gradient and Hessian (diagonal) to g and H.
+*/
+real scalar rem_nat_prior(pointer(class RemNat scalar) scalar pN, real rowvector theta, real scalar todo,
+		real rowvector g, real matrix H)
+{
+	real rowvector z
+	real scalar nu, sc, v, k
+
+	nu = (*pN).pdf
+	sc = (*pN).pscale
+	z = (theta :- (*pN).pmean) :/ sc
+	k = cols(theta)
+	if (missing(nu)) {
+		v = -0.5 * k * ln(2 * pi()) - 0.5 * sum(z :^ 2) - k * ln(sc)
+		if (todo >= 1) g = g - z / sc
+		if (todo >= 2) H = H - I(k) / sc^2
+	}
+	else {
+		v = k * (lngamma((nu + 1) / 2) - lngamma(nu / 2) - 0.5 * ln(nu * pi()) - ln(sc)) - (nu + 1) / 2 * sum(ln(1 :+ z :^ 2 / nu))
+		if (todo >= 1) g = g - ((nu + 1) :* z :/ (nu :+ z :^ 2)) / sc
+		if (todo >= 2) H = H - diag(((nu + 1) :* (nu :- z :^ 2) :/ (nu :+ z :^ 2) :^ 2) / sc^2)
+	}
+	return(v)
 }
 
 void rem_nat_eval(real scalar todo, real rowvector theta, pointer(class RemNat scalar) scalar pN,
@@ -253,6 +342,7 @@ void rem_nat_eval(real scalar todo, real rowvector theta, pointer(class RemNat s
 	}
 	if (todo >= 1) g = res[2::(1 + pt)]'
 	if (todo >= 2) H = rowshape(res[(2 + pt)::(1 + pt + pt * pt)], pt)
+	if ((*pN).prior) y = y + rem_nat_prior(pN, theta, todo, g, H)
 }
 
 void rem_nat_eval_d1(real scalar todo, real rowvector theta, pointer(class RemNat scalar) scalar pN,
@@ -332,40 +422,55 @@ void rem_newton(pointer(class RemNat scalar) scalar pN, real rowvector theta0,
 }
 
 /*
-	Which effects are an exact linear function of the effects before them (in the fixed effect order) plus a term that is
-	constant over the risk set of every event? Such an effect cannot change the likelihood (the term cancels in the softmax)
-	and the optimizer would only wander along the flat ridge. Returns a 1 x 14 0/1 vector. The plugin (code 30) evaluates the
-	static effects (1-6, 9-12) at theta = 0: minus its Hessian is the Gram matrix of the statistics centred within every risk
-	set, summed over the events, and it also returns the uncentred second moments. An effect is dependent when what is left of
-	its centred sum of squares after the effects before it is below 1e-12 of its uncentred one (rounding of exactly collinear
-	statistics is about 1e-16). The state-dependent dyadic effects (7, 8, 13, 14) are not examined.
+	Which parameters are an exact linear function of the parameters before them (in the fixed parameter order) plus a term that
+	is constant over the risk set of every event? Such a parameter cannot change the likelihood (the term cancels in the
+	softmax) and the optimizer would only wander along the flat ridge. Returns a 1 x Pall 0/1 vector. The plugin (code 30)
+	evaluates every parameter at theta = 0: minus its Hessian is the Gram matrix of the statistics centred within every risk
+	set, summed over the events (for the interval likelihood: the uncentred second moments), and it also returns the uncentred
+	second moments of the ordinal likelihood. A parameter is dependent when what is left of its centred sum of squares after
+	the parameters before it is below 1e-12 of its uncentred one (rounding of exactly collinear statistics is about 1e-16).
+	This holds for the state-dependent dyadic effects as well: a combination whose Gram quadratic form is zero is constant over
+	the risk set at every event.
 */
-real rowvector rem_nat_dependent(pointer(class RemNat scalar) scalar pN, real rowvector active)
+real rowvector rem_nat_dependent_par(pointer(class RemNat scalar) scalar pN, real scalar interval)
 {
-	real rowvector dropped, effs
+	real rowvector dropped
 	real colvector kept, res
 	real matrix G
-	real scalar k, p, r, tol, off
+	real scalar k, p, r, tol, off, ref
 	string scalar argstr
 
-	dropped = J(1, 14, 0)
-	effs = select((1, 2, 3, 4, 5, 6, 9, 10, 11, 12), active[(1, 2, 3, 4, 5, 6, 9, 10, 11, 12)])
-	k = cols(effs)
+	k = (*pN).Pall
+	dropped = J(1, k, 0)
 	if (k == 0) return(dropped)
 	argstr = "30 " + strofreal((*pN).L, "%18.0f") + " 2 " + strofreal(k) + " " + invtokens(J(1, k, "0"))
 	stata("plugin call remnative v1 v2, " + char(34) + argstr + char(34))
 	res = st_data((1::(2 + k + k * k + k)), 2)
-	if (missing(res)) return(dropped)
+	if (missing(res[1])) return(dropped)
 	G = -rowshape(res[(2 + k)::(1 + k + k * k)], k)
+	if (hasmissing(G)) return(dropped)
 	off = 1 + k + k * k          // the uncentred second moments follow the Hessian
 	tol = 1e-12
 	kept = J(0, 1, 0)
 	for (p = 1; p <= k; p++) {
 		if (rows(kept) == 0) r = G[p, p]
 		else r = G[p, p] - G[p, kept'] * lusolve(G[kept, kept'], G[kept', p])
-		if (hasmissing(r) | r <= tol * res[off + p]) dropped[effs[p]] = 1
+		ref = (interval ? G[p, p] : res[off + p])
+		if (hasmissing(r) | r <= tol * ref) dropped[p] = 1
 		else kept = (kept \ p)
 	}
+	return(dropped)
+}
+
+// the check for the model of nwrem 1.3 (one parameter per effect): a 1 x 14 vector
+real rowvector rem_nat_dependent(pointer(class RemNat scalar) scalar pN, real rowvector active)
+{
+	real rowvector dropped, dp
+
+	dropped = J(1, 14, 0)
+	if (sum(active) == 0) return(dropped)
+	dp = rem_nat_dependent_par(pN, 0)
+	dropped[selectindex(active)] = dp
 	return(dropped)
 }
 
@@ -442,60 +547,181 @@ real scalar rem_nat_optimize(pointer(class RemNat scalar) scalar pN, real rowvec
 	return(1)
 }
 
+// the time since the previous event of every event of the sorted event matrix (the first: since the start of the observation)
+real colvector rem_event_dt(real matrix ev, real scalar start)
+{
+	if (rows(ev) == 1) return(ev[1, 3] - start)
+	return(ev[., 3] :- (start \ ev[|1, 3 \ rows(ev) - 1, 3|]))
+}
+
 /*
-	RemFitMulti() -- fit for any subset of the 14 effects. eventmat = (sender, receiver, time) rows, n actors, activevec = 14
-	0/1 flags in the fixed effect order (nodsnd nidrec nidsnd nodrec ntdegsnd ntdegrec frpsndsnd frrecsnd covsnd covrec covint
-	covevent rsndsnd rrecsnd); covsndvec, covrecvec, covintvec = 1 x n per-actor covariates (J(1,n,0) for those not needed) and
-	covevmat the n x n covevent matrix (J(n,n,0) when not needed). Coefficients, variance matrix and log likelihood are
-	returned in the Stata matrices / scalar named bname, vname, llname. Effects that are exactly dependent on others (see
-	rem_nat_dependent()) get coefficient 0 and variance 0; the likelihood is that of the model without them.
+	RemFitX() -- fit of nwrem 1.4. eventmat = (sender, receiver, time) rows, n actors, active = 27 0/1 flags in the order of the
+	effects (nodsnd nidrec nidsnd nodrec ntdegsnd ntdegrec frpsndsnd frrecsnd covsnd covrec covint covevent rsndsnd rrecsnd
+	otpsnd itpsnd ospsnd ispsnd fesnd ferec feint psabba psabby psabxa psabxb psabxy psabay); CS, CR, CI = one covariate per
+	row (n columns; J(0, n, .) for none), CE = n x (n * networks) pairwise covariates; mask = n x n 0/1 matrix of the dyads in
+	the risk set (J(0, 0, .) = all), entry, exit = n x 1 times at which an actor enters and leaves the risk set (J(0, 1, .) =
+	always; a missing value = no limit); opts = (interval, conditioned events, start of the observation, end of the
+	observation (missing: the last event), posterior mode, prior mean, prior scale, prior degrees of freedom).
+	Results go to the Stata matrices pfx+"b", pfx+"V" (Pall columns) and the scalars pfx+"ll", pfx+"ll0" (the log likelihood
+	of the null model; missing when not defined), pfx+"df" (parameters in the model). Parameters that are exactly dependent on
+	others (see rem_nat_dependent_par()) get coefficient 0 and variance 0; the likelihood is that of the model without them.
+*/
+void RemFitX(real matrix eventmat, real scalar n, real rowvector active,
+		real matrix CS, real matrix CR, real matrix CI, real matrix CE, real matrix mask,
+		real colvector entry, real colvector exit, real rowvector opts, string scalar pfx)
+{
+	class RemNat scalar NT
+	real matrix ev, V, win, Vfull
+	real rowvector dropped, bfull, theta_hat
+	real colvector kp, tt, lo, hi, idx
+	real scalar nparams, nev, ok, ll, ll0, interval, ncond, start, endt, dtc, k, c, y0, ntot
+	real rowvector g0
+	real matrix H0
+
+	interval = opts[1]
+	ncond = opts[2]
+	start = opts[3]
+	endt = opts[4]
+	if (sum(active) == 0) _error("nwrem: at least one effect must be selected.")
+	ev = rem_sorted_events(eventmat)
+	nev = rows(ev)
+	if (ncond < 0 | ncond >= nev | ncond != floor(ncond)) {
+		errprintf("{p 0 0 2}nwrem: condition(%s) must be an integer between 0 and the number of events minus one (%s).{p_end}\n", strofreal(ncond), strofreal(nev - 1))
+		exit(198)
+	}
+	tt = ev[., 3]
+	dtc = 0
+	if (interval) {
+		if (nev > 1) if (min(tt[|2 \ nev|] :- tt[|1 \ nev - 1|]) <= 0) {
+			errprintf("{p 0 0 2}nwrem: the interval likelihood needs strictly increasing event times; events %s have equal times.{p_end}\n", "at the same time")
+			exit(459)
+		}
+		if (start > tt[1]) {
+			errprintf("{p 0 0 2}nwrem: starttime(%s) is later than the first event (%s).{p_end}\n", strofreal(start), strofreal(tt[1]))
+			exit(459)
+		}
+		if (missing(endt)) endt = tt[nev]
+		if (endt < tt[nev]) {
+			errprintf("{p 0 0 2}nwrem: endtime(%s) is earlier than the last event (%s).{p_end}\n", strofreal(endt), strofreal(tt[nev]))
+			exit(459)
+		}
+		dtc = endt - tt[nev]
+		ev = (ev[., (1, 2)], rem_event_dt(ev, start))
+	}
+	else ev = (ev[., (1, 2)], J(nev, 1, 0))
+	// the risk set: actor windows (first and last event number at which an actor is in the risk set) and dyad mask
+	win = J(0, 0, .)
+	if (rows(entry) > 0) {
+		lo = J(n, 1, 1)
+		hi = J(n, 1, nev + 1)
+		for (k = 1; k <= n; k++) {
+			if (!missing(entry[k])) {
+				lo[k] = 1 + sum(tt :< entry[k])
+				if (interval & dtc > 0 & entry[k] > endt) lo[k] = nev + 2
+			}
+			if (!missing(exit[k])) {
+				hi[k] = sum(tt :<= exit[k])
+				if (interval & dtc > 0 & exit[k] >= endt) hi[k] = nev + 1
+			}
+		}
+		win = (lo, hi)'
+		for (c = 1; c <= nev; c++) {
+			if (c < lo[ev[c, 1]] | c > hi[ev[c, 1]] | c < lo[ev[c, 2]] | c > hi[ev[c, 2]]) {
+				errprintf("{p 0 0 2}nwrem: event %s of the sorted event sequence involves an actor outside its entry() / exit() window.{p_end}\n", strofreal(c))
+				exit(459)
+			}
+		}
+	}
+	if (rows(mask) > 0) {
+		for (c = 1; c <= nev; c++) {
+			if (mask[ev[c, 1], ev[c, 2]] == 0) {
+				errprintf("{p 0 0 2}nwrem: event %s of the sorted event sequence is a dyad that is not in the risk set given by riskset().{p_end}\n", strofreal(c))
+				exit(459)
+			}
+		}
+	}
+	NT = RemNat()
+	NT.open()
+	NT.setupx(ev, n, active, interval, ncond, dtc, CS, CR, CI, CE, mask, win)
+	NT.prior = opts[5]
+	NT.pmean = opts[6]
+	NT.pscale = opts[7]
+	NT.pdf = opts[8]
+	// the log likelihood of the null model: the ordinal likelihood at theta = 0 (the same probability for every dyad of
+	// the risk set); the interval likelihood of relevent's constant-rate model for the complete risk set
+	ll0 = .
+	if (!interval) {
+		NT.prior = 0
+		rem_nat_eval(0, J(1, NT.Pall, 0), &NT, y0, g0, H0)
+		NT.prior = opts[5]
+		ll0 = y0
+	}
+	else if (rows(mask) == 0 & rows(entry) == 0) {
+		ntot = nev
+		ll0 = ln(ntot / (endt - start) / (n * (n - 1))) * (ntot - ncond) - ntot / (endt - start) * (ncond == 0 ? endt - start : endt - tt[ncond])
+	}
+	dropped = rem_nat_dependent_par(&NT, interval)
+	nparams = NT.Pall - sum(dropped)
+	if (nparams == 0) {
+		// no parameter with an influence on the likelihood: every dyad of every risk set has the same rate
+		NT.close()
+		st_matrix(pfx + "b", J(1, NT.Pall, 0))
+		st_matrix(pfx + "V", J(NT.Pall, NT.Pall, 0))
+		st_numscalar(pfx + "ll", ll0)
+		st_numscalar(pfx + "ll0", ll0)
+		st_numscalar(pfx + "df", 0)
+		return
+	}
+	kp = selectindex(dropped :== 0)
+	NT.setdrop(dropped)
+	ok = rem_nat_optimize(&NT, theta_hat, V, ll)
+	if (ok & NT.prior) {
+		// the log likelihood at the posterior mode, without the prior
+		NT.prior = 0
+		rem_nat_eval(0, theta_hat, &NT, y0, g0, H0)
+		ll = y0
+	}
+	NT.close()
+	if (ok == 0) {
+		errprintf("{p 0 0 2}nwrem: the optimization did not find a maximum of the likelihood.{p_end}\n")
+		exit(430)
+	}
+	bfull = J(1, NT.Pall, 0)
+	Vfull = J(NT.Pall, NT.Pall, 0)
+	bfull[kp] = theta_hat
+	Vfull[kp, kp] = V
+	st_matrix(pfx + "b", bfull)
+	st_matrix(pfx + "V", Vfull)
+	st_numscalar(pfx + "ll", ll)
+	st_numscalar(pfx + "ll0", ll0)
+	st_numscalar(pfx + "df", nparams)
+}
+
+/*
+	RemFitMulti() -- fit of nwrem 1.3 for any subset of the first 14 effects (the old interface; development scripts use it):
+	eventmat = (sender, receiver, time) rows, n actors, activevec = 14 0/1 flags in the fixed effect order, covsndvec, covrecvec,
+	covintvec = 1 x n per-actor covariates (J(1,n,0) for those not needed) and covevmat the n x n covevent matrix (J(n,n,0)
+	when not needed). Coefficients, variance matrix and log likelihood are returned in the Stata matrices / scalar named bname,
+	vname, llname.
 */
 void RemFitMulti(real matrix eventmat, real scalar n, real rowvector activevec,
 		real rowvector covsndvec, real rowvector covrecvec, real rowvector covintvec,
 		real matrix covevmat,
 		string scalar bname, string scalar vname, string scalar llname)
 {
-	class RemNat scalar NT
-	real matrix ev, V
-	real rowvector dropped, actred, bfull, theta_hat
-	real colvector kp
-	real matrix Vfull
-	real scalar nparams, nfull, nev, ok, ll
-
-	nfull = sum(activevec)
-	if (nfull == 0) _error("nwrem: at least one effect must be selected.")
-	ev = rem_sorted_events(eventmat)
-	nev = rows(ev)
-
-	NT = RemNat()
-	NT.open()
-	NT.setup(ev, n, activevec, covsndvec, covrecvec, covintvec, covevmat)
-	dropped = rem_nat_dependent(&NT, activevec)
-	actred = activevec :* (1 :- dropped)
-	nparams = sum(actred)
-	kp = selectindex(dropped[selectindex(activevec)] :== 0)
-	if (nparams == 0) {
-		// no effect with an influence on the likelihood: every dyad of every risk set has the same rate
-		NT.close()
-		st_matrix(bname, J(1, nfull, 0))
-		st_matrix(vname, J(nfull, nfull, 0))
-		st_numscalar(llname, -nev * ln(n * (n - 1)))
-		return
-	}
-	NT.setactive(actred)
-	ok = rem_nat_optimize(&NT, theta_hat, V, ll)
-	NT.close()
-	if (ok == 0) {
-		errprintf("{p 0 0 2}nwrem: the optimization did not find a maximum of the likelihood.{p_end}\n")
-		exit(430)
-	}
-	bfull = J(1, nfull, 0)
-	Vfull = J(nfull, nfull, 0)
-	bfull[kp] = theta_hat
-	Vfull[kp, kp] = V
-	st_matrix(bname, bfull)
-	st_matrix(vname, Vfull)
-	st_numscalar(llname, ll)
+	RemFitX(eventmat, n, (activevec, J(1, 13, 0)),
+		(activevec[9] ? covsndvec : J(0, n, .)), (activevec[10] ? covrecvec : J(0, n, .)), (activevec[11] ? covintvec : J(0, n, .)),
+		(activevec[12] ? covevmat : J(n, 0, .)), J(0, 0, .), J(0, 1, .), J(0, 1, .), (0, 0, 0, ., 0, 0, 100, 4), "__nwrem_t_")
+	st_matrix(bname, st_matrix("__nwrem_t_b"))
+	st_matrix(vname, st_matrix("__nwrem_t_V"))
+	st_numscalar(llname, st_numscalar("__nwrem_t_ll"))
+	st_matrix("__nwrem_t_b", J(0, 0, .))
+	st_matrix("__nwrem_t_V", J(0, 0, .))
+	stata("capture matrix drop __nwrem_t_b")
+	stata("capture matrix drop __nwrem_t_V")
+	stata("capture scalar drop __nwrem_t_ll")
+	stata("capture scalar drop __nwrem_t_ll0")
+	stata("capture scalar drop __nwrem_t_df")
 }
 
 end
