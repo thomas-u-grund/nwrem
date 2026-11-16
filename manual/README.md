@@ -15,7 +15,6 @@ Change `\manualseries` only for a new minor or major release whose documented be
 
 ## The DOI
 
-`\manualdoi` in `nwrem_manual.tex` is a placeholder (`TO-BE-REPLACED`): the Zenodo record does not exist yet. When the owner has created it, put the all-versions DOI there (format `10.5281/zenodo.NNNNNNNN`) and add it to the citation texts listed in `ZENODO.md`. Until then the PDF prints `https://doi.org/TO-BE-REPLACED` in the citation.
 
 ## Building
 
@@ -35,4 +34,5 @@ The Stata logs (`ex/ex*.log`) are not committed: they contain the licence header
 
 ## Archiving
 
-`ZENODO.md` holds the metadata for the Zenodo record and the steps to do. Nothing has been uploaded.
+
+The PDF is published on the package website (https://nwcommands.org/nwrem/nwrem_manual.pdf); there is no Zenodo record.
