@@ -30,7 +30,14 @@ program nwrem_version, rclass
 		if "`__coredate'" != "" local __core "distribution of `__coredate'"
 		else local __core "installed (development copy, no distribution date)"
 	}
-	local __plug "none (Mata only)"
+	// the Mata library must be indexed before RemNativePluginPath() can be found (a fresh session otherwise reports the plugin as missing)
+	capture _nwrem_libcheck
+	capture mata: st_local("__plp", RemNativePluginPath())
+	capture mata: st_local("__pla", strofreal(RemNativeAvailable()))
+	if "`__pla'" == "1" {
+		local __plug "`__plp' (ships with the package, no separate version number)"
+	}
+	else local __plug "missing (nwrem needs it and stops with r(601); see the help file)"
 	local __ref "relevent 1.2-1"
 	display as text "nwrem version `__pkgver', `__pkgdate'"
 	display as text "  core package nwcommands : `__core'"

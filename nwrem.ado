@@ -46,8 +46,7 @@ program nwrem, eclass
 		error 198
 	}
 
-	// Fixed effect order matching unw_rem.do's own rem_loglik_grad_multi()
-	// exactly - see that function's own header comment. At least one
+	// Fixed effect order of RemFitMulti() (unw_rem.do). At least one
 	// effect must be selected; no default is silently assumed.
 	local __nwrem_effnames "nodsnd nidrec nidsnd nodrec ntdegsnd ntdegrec frpsndsnd frrecsnd covsnd covrec covint covevent rsndsnd rrecsnd"
 	local __nwrem_active ""
@@ -184,8 +183,20 @@ program nwrem, eclass
 		error 2001
 	}
 
-	mata: RemFitMulti(`__nwrem_events', `nodes', (`__nwrem_active'), `__nwrem_covsnd', `__nwrem_covrec', `__nwrem_covint', `__nwrem_covevmat', "__nwrem_b", "__nwrem_V", "__nwrem_ll")
-	mata: mata drop `__nwrem_events' `__nwrem_covsnd' `__nwrem_covrec' `__nwrem_covint' `__nwrem_covevmat'
+	// the fit runs in the compiled plugin (it writes the model into the frame __nwrem_native and leaves the current frame
+	// as it was); an error inside the fit must not leave that frame behind
+	local __nwrem_frame = c(frame)
+	capture noisily mata: RemFitMulti(`__nwrem_events', `nodes', (`__nwrem_active'), `__nwrem_covsnd', `__nwrem_covrec', `__nwrem_covint', `__nwrem_covevmat', "__nwrem_b", "__nwrem_V", "__nwrem_ll")
+	local __nwrem_rc = _rc
+	if "`c(frame)'" != "`__nwrem_frame'" quietly frame change `__nwrem_frame'
+	capture frame drop __nwrem_native
+	capture mata: mata drop `__nwrem_events' `__nwrem_covsnd' `__nwrem_covrec' `__nwrem_covint' `__nwrem_covevmat'
+	if `__nwrem_rc' {
+		capture matrix drop __nwrem_b
+		capture matrix drop __nwrem_V
+		capture scalar drop __nwrem_ll
+		exit `__nwrem_rc'
+	}
 
 	tempname b V
 	matrix `b' = __nwrem_b

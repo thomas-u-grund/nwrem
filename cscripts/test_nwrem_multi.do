@@ -10,6 +10,7 @@ adopath ++ `"`nwcore'"'
 adopath ++ `"`c(pwd)'"'
 quietly do `"`nwcore'/unw_core.do"'
 do unw_rem.do
+do cscripts/ref_rem_mata.do
 
 * Certifies unw_rem.do's generalized multi-effect engine (units 2 + 5 +
 * unit 4's static covariates - CovSnd/CovRec/CovInt/CovEvent - and unit

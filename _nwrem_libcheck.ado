@@ -7,7 +7,7 @@
 capture program drop _nwrem_libcheck
 program define _nwrem_libcheck
 	version 14
-	capture mata: mata which rem_rank_reciprocal()
+	capture mata: mata which RemFitMulti()
 	if _rc {
 		capture mata: mata mlib index
 	}

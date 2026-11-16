@@ -10,6 +10,7 @@ adopath ++ `"`nwcore'"'
 adopath ++ `"`c(pwd)'"'
 quietly do `"`nwcore'/unw_core.do"'
 do unw_rem.do
+do cscripts/ref_rem_mata.do
 
 * Certifies unw_rem.do's unit-1 engine (the development notes): the
 * degree-accumulator semantics, self-loop rejection, the analytic
