@@ -3,6 +3,11 @@
 All notable changes to nwrem are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+- Coefficient tables show the coefficient names in full by default: the confidence intervals are left out, as with `noci`, at a `linesize` below 100 (where names of up to 32 characters do not fit next to them); before, long names were cut (e.g. `covevent_sa~p`). The new option `ci`, or `level(#)` given explicitly, shows the intervals as before. The display options of Stata's estimation commands (`noci`, `nopvalues`, `cformat()`, `pformat()`, `sformat()` and the others of `ereturn display`) are accepted in fits and in the replay (`nwrem` alone, `estimates replay`). Tables whose names all fit, and all output outside the coefficient tables, are unchanged.
+
 ## [1.4.0] - 2026-11-16
 
 ### Added

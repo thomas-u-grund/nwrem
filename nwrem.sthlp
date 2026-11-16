@@ -55,7 +55,9 @@
 {opt priorscale(#)}
 {opt priordf(#)}
 {opt seed(#)}
-{opt level(#)}]
+{opt ci}
+{opt level(#)}
+{it:display_options}]
 
 
 {synoptset 20 tabbed}{...}
@@ -116,10 +118,12 @@ past senders, most recent = rank 1; 0 if never received from before) - a recency
 {synopt:{opt seed(#)}}set the random-number seed before estimation; the fit starts from zero and uses random starting values only when the Newton iteration
 does not reach a maximum (no maximum exists, or effects are not identified), so the seed makes such fits reproducible; different seeds give the same MLE up to the
 convergence tolerance, except along the flat likelihood ridges described in the note on precision below; {it:#} is an integer between 0 and 2147483647{p_end}
-{synopt:{opt level(#)}}confidence level of the displayed intervals; default {cmd:level(95)}{p_end}
+{synopt:{opt ci}}Show the confidence intervals in the coefficient table. By default the table shows the coefficient names in full, and the intervals are left out (as with {opt noci}) at a {cmd:set linesize} below 100, where names of up to 32 characters do not fit next to them. With {opt ci} the intervals are shown and long names are cut (e.g. {cmd:covevent_sa~p}){p_end}
+{synopt:{opt level(#)}}confidence level of the intervals; giving it also shows them, as {opt ci}; default {cmd:level(95)} or as set by {cmd:set level}{p_end}
+{synopt:{it:{help estimation_options##display_options:display_options}}}{opt noci}, {opt nopvalues}, {opt cformat(%fmt)}, {opt pformat(%fmt)}, {opt sformat(%fmt)} and the other display options of Stata's estimation commands{p_end}
 {synoptline}
 {p2colreset}{...}
-{pstd}At least one effect must be specified. Typed without arguments (or with {opt level()} only),
+{pstd}At least one effect must be specified. Typed without arguments (or with display options only: {opt ci}, {opt level()}, ...),
 {cmd:nwrem} redisplays the results of the last {cmd:nwrem} fit; {cmd:estimates replay} works as well.{p_end}
 
 

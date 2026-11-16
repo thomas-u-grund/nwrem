@@ -13,20 +13,24 @@ program nwrem, eclass
 		nwrem_version
 		exit
 	}
-	// replay: nwrem with no arguments, or with display options only (level()), after an nwrem fit; also what
-	// estimates replay runs
+	// replay: nwrem with no arguments, or with display options only (ci, level(), noci, nopvalues, cformat() and the
+	// other options of Stata's ereturn display), after an nwrem fit; also what estimates replay runs
 	if replay() {
-		capture syntax [, Level(cilevel)]
+		capture _nwrem_tabopts __t check `0'
 		if !_rc {
 			if "`e(cmd)'" != "nwrem" error 301
-			_nwrem_display, level(`level')
+			_nwrem_display `0'
 			exit
 		}
 	}
 	syntax [anything(name=netname)] [, NODSND NIDREC NIDSND NODREC NTDEGSND NTDEGREC FRPSNDSND FRRECSND COVSND(varlist numeric) COVREC(varlist numeric) COVINT(varlist numeric) COVEVENT(string) RSNDSND RRECSND ///
 		OTPSND ITPSND OSPSND ISPSND FESND FEREC FEINT PSABBA PSABBY PSABXA PSABXB PSABXY PSABAY ///
 		INTerval STARTtime(string) ENDtime(string) CONDition(string) RISKset(string) ENTRY(varname numeric) EXIT(varname numeric) ///
-		POSTmode PRIORMean(string) PRIORScale(string) PRIORDf(string) SEED(string) Level(cilevel)]
+		POSTmode PRIORMean(string) PRIORScale(string) PRIORDf(string) SEED(string) *]
+	// display options of the coefficient table (ci, level(), noci, nopvalues, cformat(), ...); any other option is
+	// refused here with Stata's usual message
+	local __tabopts `"`options'"'
+	_nwrem_tabopts __chk check, `__tabopts'
 	if `"`seed'"' != "" {
 		capture confirm integer number `seed'
 		if _rc | real(`"`seed'"') < 0 | real(`"`seed'"') > 2147483647 {
@@ -393,22 +397,70 @@ program nwrem, eclass
 		}
 	}
 	ereturn local unidentified "`=trim("`__nwrem_bad'")'"
-	_nwrem_display, level(`level')
+	_nwrem_display, `__tabopts'
 end
 
 capture program drop _nwrem_display
 program _nwrem_display
-	syntax [, Level(cilevel)]
+	syntax [, *]
 	di as text "{hline 60}"
 	di as text "`e(title)'"
 	di as text "Network: " as result "`e(depvar)'" _col(40) as text "Actors: " as result e(nodes)
 	di as text "Events: " as result e(N) _col(40) as text "Log likelihood: " as result %9.4f e(ll)
 	di as text "{hline 60}"
-	ereturn display, level(`level')
+	_nwrem_tabopts __t, `options'
+	ereturn display, `__t'
 	if "`e(unidentified)'" != "" {
 		di as text "{p 0 6 2}Note: no usable standard error for " as result "`e(unidentified)'" as text ".{p_end}"
 		di as text "{p 6 6 2}These effects are not identified: typically an effect is an exact function of others in the model"   ///
 			" (the total-degree share ntdegsnd is half the sum of nodsnd and nidsnd). Its estimate is arbitrary;"   ///
 			" drop one of the effects.{p_end}"
 	}
+end
+
+// the options of ereturn display for the coefficient table. The coefficient names are shown in full: the
+// confidence intervals are left out (noci) at a linesize below 100, where names of up to 32 characters do not fit next
+// to them. ci, or level(#) given explicitly, shows the intervals (long names are then cut, e.g. nodematch_o~e); noci,
+// nopvalues, cformat() and the other display options of Stata's estimation commands are passed on. With check, only
+// the options are checked (before a fit).
+// Use: _nwrem_tabopts <local> [check] [, options]; the options for ereturn display are returned in <local>.
+capture program drop _nwrem_tabopts
+program _nwrem_tabopts
+	version 14
+	gettoken __mac 0 : 0, parse(" ,")
+	gettoken __chk : 0, parse(" ,")
+	if `"`__chk'"' == "check" gettoken __chk 0 : 0, parse(" ,")
+	else local __chk
+	syntax [, Level(string) *]
+	local __lev `"`level'"'
+	// ci is picked out by hand: declared to syntax, ci would also take noci (as its negation)
+	local ci
+	local __rest
+	while `"`options'"' != "" {
+		gettoken __o options : options, bind
+		if strlower(`"`__o'"') == "ci" local ci ci
+		else local __rest `"`__rest' `__o'"'
+	}
+	_get_diopts __di, `__rest'
+	local __noci : list posof "noci" in __di
+	local __nopv : list posof "nopvalues" in __di
+	if "`ci'" != "" & `__noci' {
+		di as err "only one of options ci or noci is allowed"
+		exit 198
+	}
+	local __show = ("`ci'" != "" | `"`__lev'"' != "")
+	if `"`__lev'"' != "" {
+		local 0 , level(`__lev')
+		syntax [, Level(cilevel)]
+		local __lev `level'
+	}
+	else local __lev = c(level)
+	if "`__chk'" != "" exit
+	local __add
+	if !`__show' & !`__noci' & !`__nopv' {
+		// full names: at a linesize below 100 (or with lstretch off) the names of up to 32 characters do not fit next
+		// to the intervals; from 100 on both fit
+		if c(linesize) < 100 | c(lstretch) == "off" | `: list posof "nolstretch" in __di' local __add noci
+	}
+	c_local `__mac' `"level(`__lev') `__di' `__add'"'
 end
