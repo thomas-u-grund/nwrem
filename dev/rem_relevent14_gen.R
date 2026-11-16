@@ -299,6 +299,49 @@ for (k in 1:3) {
   }
 }
 
+
+# I: effects that are exactly dependent on others (omitted by nwrem): tiny networks (2 and 3 actors) where state-dependent, triadic,
+# fixed and participation-shift effects become exact functions of each other. The expected set is found from relevent's own
+# statistics: the Gram matrix of the statistics centred within every risk set, summed over the events, eliminated in the fixed
+# parameter order of nwrem (a parameter is dropped when what is left of its sum of squares after the ones before it is at most 1e-12
+# of its uncentred sum of squares).
+ncode <- c("nodsnd","nidrec","nidsnd","nodrec","ntdegsnd","ntdegrec","frpsndsnd","frrecsnd","covsnd","covrec","covint","covevent","rsndsnd","rrecsnd",
+           "otpsnd","itpsnd","ospsnd","ispsnd","fesnd","ferec","feint","psabba","psabby","psabxa","psabxb","psabxy","psabay")
+poolc <- setdiff(ncode, c("covsnd","covrec","covint","covevent","ospsnd"))
+coll <- list()
+set.seed(4242)
+for (k in 1:40) {
+  n <- if (k <= 14) 2 else 3
+  m <- sample(8:45, 1)
+  nsub <- if (k <= 8) 8 else sample(3:9, 1)
+  if (k <= 4) eff <- c("nodsnd","nidrec","nidsnd","nodrec","frpsndsnd","frrecsnd","rsndsnd","rrecsnd")[1:8]
+  else eff <- ncode[ncode %in% sample(poolc, nsub)]
+  if (k <= 4) eff <- eff[ncode[match(eff, ncode)] %in% eff]
+  if (n == 2) {
+    el <- matrix(0, m, 3); t <- 0
+    for (i in 1:m) { t <- t + rexp(1); a <- sample(2, 1); el[i, ] <- c(t, a, 3 - a) }
+    if (length(unique(el[, 2])) < 2) el[1, 2:3] <- c(1, 2)
+    if (all(el[, 2] == 1)) el[m, 2:3] <- c(2, 1)
+  } else el <- sim_log(n, m, 900 + k)
+  cube <- cube_relevent(el, n, relname[eff], NULL)
+  pn <- dimnames(cube)[[3]]
+  key <- sapply(nwname(pn), function(p) { b <- sub("_[0-9]+$", "", p); match(b, ncode) })
+  ord <- order(key, seq_along(key)); cube <- cube[, , ord, drop = FALSE]; pn <- pn[ord]
+  P <- length(pn); G <- matrix(0, P, P); U <- numeric(P)
+  for (i in 1:m) { Z <- matrix(cube[i, , ], ncol = P); U <- U + colMeans(Z^2); Zc <- sweep(Z, 2, colMeans(Z)); G <- G + crossprod(Zc) }
+  kept <- integer(0); dropped <- rep(0, P)
+  for (p in 1:P) {
+    r <- if (length(kept) == 0) G[p, p] else G[p, p] - drop(G[p, kept] %*% solve(G[kept, kept, drop = FALSE], G[kept, p]))
+    if (is.na(r) || r <= 1e-12 * U[p]) dropped[p] <- 1 else kept <- c(kept, p)
+  }
+  if (length(kept) == 0) next
+  cs <- sprintf("col%d", k)
+  write_case(cs, n, el, paste(eff, collapse = " "), note = "dependence")
+  coll[[length(coll) + 1]] <- data.frame(case = cs, param = nwname(pn), dropped = dropped, stringsAsFactors = FALSE)
+}
+write.csv(do.call(rbind, coll), sprintf("%s/collinear.csv", outdir), row.names = FALSE)
+cat("collinearity cases:", length(coll), " with dropped parameters:", sum(sapply(coll, function(d) any(d$dropped == 1))), "\n")
+
 write.csv(do.call(rbind, results), sprintf("%s/results.csv", outdir), row.names = FALSE)
 write.csv(do.call(rbind, cases), sprintf("%s/cases.csv", outdir), row.names = FALSE)
 cat("cases:", length(cases), " results rows:", length(do.call(rbind, results)[[1]]), "\n")

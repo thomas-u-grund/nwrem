@@ -19,7 +19,7 @@ local ref "cscripts/ref14"
 tempfile res cases
 import delimited "`ref'/results.csv", clear varnames(1) asdouble stringcols(1 2 3)
 save `res'
-import delimited "`ref'/cases.csv", clear varnames(1) asdouble stringcols(1 4 5)
+import delimited "`ref'/cases.csv", clear varnames(1) asdouble stringcols(1 4 5 7)
 save `cases'
 
 capture program drop chk14
@@ -92,6 +92,7 @@ end
 
 global nfail14 = 0
 use `cases', clear
+drop if note == "dependence"
 local ncase = _N
 forvalues k = 1/`ncase' {
 	local c`k' = case[`k']

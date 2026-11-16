@@ -127,7 +127,6 @@ typedef struct {
 static int is_A(int e) { return e == 1 || e == 3 || e == 5 || e == 7 || e == 8 || e == 9 || e == 11 || e == 23 || e == 26 || e == 27; }
 static int is_B(int e) { return e == 2 || e == 4 || e == 6 || e == 10 || e == 11 || e == 24 || e == 25 || e == 26; }
 static int is_S(int e) { return e == 7 || e == 8 || (e >= 12 && e <= 18) || (e >= 22 && e <= 27); }
-static int is_FE(int e) { return e >= 19 && e <= 21; }
 
 static void row_free(Row *r) {
 	free(r->k); free(r->sig); free(r->ex); free(r->e1); free(r->sv); free(r->excl); free(r->tch);
@@ -511,7 +510,6 @@ static int run(const Spec *sp, const double *theta, int todo, int dense, int wan
 			nwint s = 0, r = 0, ja;
 			double Ma, Mb, Z0 = 0.0, Zc = 0.0, Zt, lr = 0.0, lsr_sig = 0.0, logZ, dt = 0.0, idx = (double)(i + 1);
 			double prior = (double)i;
-			int nact = 0, nactr = 0;
 
 			if (i == m && !(interval && sp->dtc > 0.0)) break;
 			counted = (i >= sp->ncond);
@@ -553,9 +551,7 @@ static int run(const Spec *sp, const double *theta, int todo, int dense, int wan
 			/* the risk set: actors in it at this event */
 			for (j = 0; j < n; j++) {
 				actS[j] = (char)(!sp->haswin || (idx >= sp->lo[j] && idx <= sp->hi[j]));
-				if (actS[j]) { nact++; nactr++; }
 			}
-			(void)nactr;
 			/* a_j and b_k */
 			for (j = 0; j < n; j++) { a[j] = 0.0; b[j] = 0.0; }
 			for (p = 0; p < P; p++) {

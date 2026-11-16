@@ -125,7 +125,7 @@ xt_err 109 nwrem w40, covsnd(sx)
 xt_err 109 nwrem w40, covrec(sx)
 xt_err 109 nwrem w40, covint(sx)
 xt_err 111 nwrem w40, covsnd(nosuchvar)
-xt_err 103 nwrem w40, covsnd(x x2)
+xt_err 111 nwrem w40, covsnd(x nosuchvar)
 preserve
 quietly drop in 4
 xt_err 198 nwrem w40, covsnd(x)

@@ -153,6 +153,10 @@ class RemNat {
 	real scalar prior    // 1 = posterior mode: the t (or normal) prior of relevent is added to the log likelihood
 	real scalar pmean, pscale, pdf
 	real colvector blob0 // the blob without a drop mask
+	real scalar cached   // 1 = the evaluation at theta = 0 of the dependence check is kept (cy, cg, cH, ckeep)
+	real scalar cy
+	real rowvector cg, ckeep
+	real matrix cH
 	string scalar origframe
 
 	void open()
@@ -169,6 +173,7 @@ void RemNat::open()
 
 	isopen = 0
 	prior = 0
+	cached = 0
 	fname = RemNativePluginFilename()
 	p = RemNativePluginPath()
 	if (p == "" | !fileexists(p)) {
@@ -285,6 +290,7 @@ void RemNat::setdrop(real rowvector dropall)
 {
 	real colvector b2
 
+	ckeep = selectindex(dropall :== 0)
 	b2 = blob0
 	b2[13] = 1
 	b2 = b2 \ dropall'
@@ -369,7 +375,14 @@ void rem_newton(pointer(class RemNat scalar) scalar pN, real rowvector theta0,
 	ok = 0
 	polish = 1
 	t = theta0
-	rem_nat_eval(2, t, pN, y, g, H)
+	if ((*pN).cached & !any(theta0)) {
+		// the evaluation at theta = 0 was done by the dependence check
+		y = (*pN).cy
+		g = (*pN).cg[(*pN).ckeep]
+		H = (*pN).cH[(*pN).ckeep, (*pN).ckeep]
+		if ((*pN).prior) y = y + rem_nat_prior(pN, t, 2, g, H)
+	}
+	else rem_nat_eval(2, t, pN, y, g, H)
 	if (missing(y) | missing(g) | missing(H)) return
 	good = 0
 	for (it = 1; it <= 100; it++) {
@@ -449,6 +462,11 @@ real rowvector rem_nat_dependent_par(pointer(class RemNat scalar) scalar pN, rea
 	if (missing(res[1])) return(dropped)
 	G = -rowshape(res[(2 + k)::(1 + k + k * k)], k)
 	if (hasmissing(G)) return(dropped)
+	// the evaluation at theta = 0 (likelihood, gradient, Hessian) is the first Newton step and the null model of the ordinal likelihood
+	(*pN).cy = res[1]
+	(*pN).cg = res[2::(1 + k)]'
+	(*pN).cH = -G
+	(*pN).cached = 1
 	off = 1 + k + k * k          // the uncentred second moments follow the Hessian
 	tol = 1e-12
 	kept = J(0, 1, 0)
@@ -650,17 +668,20 @@ void RemFitX(real matrix eventmat, real scalar n, real rowvector active,
 	// the log likelihood of the null model: the ordinal likelihood at theta = 0 (the same probability for every dyad of
 	// the risk set); the interval likelihood of relevent's constant-rate model for the complete risk set
 	ll0 = .
+	dropped = rem_nat_dependent_par(&NT, interval)
 	if (!interval) {
-		NT.prior = 0
-		rem_nat_eval(0, J(1, NT.Pall, 0), &NT, y0, g0, H0)
-		NT.prior = opts[5]
-		ll0 = y0
+		if (NT.cached) ll0 = NT.cy
+		else {
+			NT.prior = 0
+			rem_nat_eval(0, J(1, NT.Pall, 0), &NT, y0, g0, H0)
+			NT.prior = opts[5]
+			ll0 = y0
+		}
 	}
 	else if (rows(mask) == 0 & rows(entry) == 0) {
 		ntot = nev
 		ll0 = ln(ntot / (endt - start) / (n * (n - 1))) * (ntot - ncond) - ntot / (endt - start) * (ncond == 0 ? endt - start : endt - tt[ncond])
 	}
-	dropped = rem_nat_dependent_par(&NT, interval)
 	nparams = NT.Pall - sum(dropped)
 	if (nparams == 0) {
 		// no parameter with an influence on the likelihood: every dyad of every risk set has the same rate
