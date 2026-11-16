@@ -94,3 +94,24 @@ times. `nwrem.ado` refuses both before the fit (r(416)).
 - **`covevent()` diagonal:** nwrem.ado accepts a missing diagonal and non-binary values. The dense evaluator overwrote the diagonal of the log-rate matrix with -1e300, so whatever the diagonal held did not matter. The fast evaluator must set the diagonal of the covariate to 0 before it forms `exp(theta * C)`. Leaving it missing makes the normaliser and the gradient silently wrong: prototype fits then needed 1,000 to 13,000 evaluations and returned wrong estimates.
 - **The optimizer's random starts decide which point of a flat ridge is returned.** Collinear effects (for example `nodsnd nidsnd ntdegsnd`) have no unique maximum; the old code returned arbitrary coefficients for them and took about 500 evaluations. Since 1.2.0 `rem_dependent_effects()` removes exactly dependent effects before the optimizer (coefficient 0, variance 0; `nwrem.ado` flags them through the variance). Tests that compare such fits with an older engine can compare only the log likelihood and the identified combinations (here `nodsnd + ntdegsnd / 2`).
 - **Mata at the top level of a do-file:** an `if (...) { ... }` block as the last statement before `end` makes Mata wait for a possible `else` and fail with "unexpected end of line"; end such a block with another statement. `external` declarations are not allowed at the top level (put them in a function).
+
+## The fit needs the plugin: tests that read `lib/lnwrem.mlib` and `lib/plugins/macos` see the repo build only through the adopath
+
+`nwrem` finds the plugin with `findfile("rem_sim_<platform>.plugin")` (what `net install` makes visible) and, for a checkout of the repository, at `lib/plugins/<platform>/` next to `nwrem.ado`. A stale `rem_sim_macos.plugin` in the real PLUS folder shadows the repo build: `cscripts/run_tests.sh` sets a scratch PLUS and puts `lib/plugins/macos` on the adopath. The fit tests use `lib/lnwrem.mlib`: rebuild it with Stata 17 (`lib/build.do`) after every change of `unw_rem.do`.
+
+## Plugin protocol and loaded plugins
+
+The probe `99 0 0 0 0 0 0` returns the protocol number (row 1 of variable 2). Within one Stata session the first plugin loaded for the program name `remnative` stays, even when another file of that name is put first on the adopath: that is why `test_nwrem_oldplugin.do` (builds a plugin with `-DREM_PROTOCOL=0` from `native/rem_sim.c`) and `test_nwrem_noplugin.do` are separate files.
+The fit writes its model into the frame `__nwrem_native`; `nwrem.ado` restores the current frame and drops that frame after every fit, also after an error (an error inside Mata would otherwise leave the user in the plugin's frame).
+
+## The exact Hessian makes the Newton fit converge to the true maximum: reference values of older versions are only BFGS-accurate
+
+Fits of versions up to 1.2.0 stopped where `optimize()` (BFGS, numerical Hessian) met its default tolerances: coefficients and standard errors of the old reference values differ from the maximum in the fourth to fifth digit (the log likelihood in the tenth). `test_nwrem_fast` therefore compares coefficients and standard errors to 5e-4 and requires the new log likelihood to be at least as high.
+
+## Plugin and Mata reference must agree: change a statistic in BOTH places
+
+The statistics are defined in `native/rem_sim.c` (`part_A/B/S`, `sval_one`, the share formulas) and in `cscripts/ref_rem_mata.do` (`rem_loglik_grad_multi`). The plugin test compares log likelihood and gradient (1e-9 relative) and, on a sample of models, the Hessian with the numerical derivative of the reference gradient. A bug in a statistic that is changed only in the plugin shows up as a difference there; do not "fix" the test.
+
+## The fast evaluator gives up in four cases and the plugin then evaluates densely (O(n^2) per event)
+
+exp() overflow of a sparse dyadic term (sigma > 700), an underflowing normaliser, a correction that cancels more than six digits (a large negative coefficient of a dyadic effect on dyads that carry nearly all the mass) and a missing value. Result row `2 + P + P*P + P` of the plugin tells which evaluator ran (code 22 = fast only, 21 = dense only; tests use them). A fit whose iterations all take the dense route is slow at large n; nothing is wrong with it.

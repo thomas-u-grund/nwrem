@@ -274,9 +274,10 @@ void rem_newton(pointer(class RemNat scalar) scalar pN, real rowvector theta0,
 {
 	real rowvector t, tn, g, gn, d
 	real matrix H, Hn, Hi
-	real scalar y, yn, it, k, step, dec, good
+	real scalar y, yn, it, k, step, dec, good, polish
 
 	ok = 0
+	polish = 1
 	t = theta0
 	rem_nat_eval(2, t, pN, y, g, H)
 	if (missing(y) | missing(g) | missing(H)) return
@@ -288,6 +289,7 @@ void rem_newton(pointer(class RemNat scalar) scalar pN, real rowvector theta0,
 		dec = d * g'
 		if (dec < max((1e-12, 1e-13 * abs(y)))) {
 			good = 1
+			polish = (dec > 1e-10)
 			break
 		}
 		step = 1
@@ -310,8 +312,9 @@ void rem_newton(pointer(class RemNat scalar) scalar pN, real rowvector theta0,
 		H = Hn
 	}
 	if (!good) return
-	// bring the gradient to round-off level: steps are taken while they reduce its norm
-	for (it = 1; it <= 5; it++) {
+	// bring the gradient to round-off level: steps are taken while they reduce its norm (not needed when the Newton
+	// decrement is already at round-off level)
+	for (it = 1; it <= 5 & polish; it++) {
 		tn = t + g * invsym(-H)
 		rem_nat_eval(2, tn, pN, yn, gn, Hn)
 		if (missing(yn) | missing(gn) | missing(Hn)) break

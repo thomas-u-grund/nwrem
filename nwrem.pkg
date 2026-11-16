@@ -11,3 +11,11 @@ f _nwrem_libcheck.ado
 f nwrem_version.ado
 f nwrem.sthlp
 f lib/lnwrem.mlib
+f lib/plugins/macos/rem_sim_macos.plugin
+f lib/plugins/windows/rem_sim_windows.plugin
+f lib/plugins/unix/rem_sim_unix.plugin
+f native/rem_sim.c
+f native/Makefile
+f native/spi/stplugin.c
+f native/spi/stplugin.h
+f nwrem_native_readme.txt

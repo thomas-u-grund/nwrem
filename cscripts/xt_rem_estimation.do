@@ -120,7 +120,7 @@ nwrem version
 assert "`r(version)'" == "`ev'"
 assert "`r(reference)'" == "relevent 1.2-1"
 assert "`r(license)'" == "GPL-3"
-assert "`r(plugin)'" == "none (Mata only)"
+assert strpos(`"`r(plugin)'"', "rem_sim_") > 0
 * nwrem version is r-class and must leave e() alone
 assert "`e(cmd)'" == "nwrem"
 assert e(N) == 40

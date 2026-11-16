@@ -80,14 +80,17 @@ typedef struct {
 	int32_t *cij, *rk13, *rk14, *outl, *inl, *outlen, *inlen;
 	int32_t *pidx;               /* n*n: position of the dyad in the list of sparse dyads, -1 = not in it */
 	int32_t *pj, *pk;
-	double *sval, *sig;          /* per sparse dyad: NS statistics, sigma */
-	nwint np, cap;
-	int NS;
+	double *sval, *sig, *ex, *e1;/* per sparse dyad: P statistics (0 for effects without a sparse part), sigma, exp(sigma), expm1(sigma) */
+	nwint np, cap, nbig;         /* number of sparse dyads with sigma > 700 */
+	int NS, P;
+	int hS[NEFF], eff[NEFF];
+	const Spec *sp;
+	const double *theta;
 } State;
 
 static void state_free(State *st) {
 	free(st->ocnt); free(st->icnt); free(st->cij); free(st->rk13); free(st->rk14); free(st->outl); free(st->inl);
-	free(st->outlen); free(st->inlen); free(st->pidx); free(st->pj); free(st->pk); free(st->sval); free(st->sig);
+	free(st->outlen); free(st->inlen); free(st->pidx); free(st->pj); free(st->pk); free(st->sval); free(st->sig); free(st->ex); free(st->e1);
 	memset(st, 0, sizeof(State));
 }
 
@@ -111,7 +114,9 @@ static int state_reserve(State *st, nwint want) {
 		a = (int32_t *)realloc(st->pj, (size_t)nc * sizeof(int32_t)); if (!a) return 909; st->pj = a;
 		b = (int32_t *)realloc(st->pk, (size_t)nc * sizeof(int32_t)); if (!b) return 909; st->pk = b;
 		c = (double *)realloc(st->sig, (size_t)nc * sizeof(double)); if (!c) return 909; st->sig = c;
-		if (st->NS > 0) { d = (double *)realloc(st->sval, (size_t)nc * (size_t)st->NS * sizeof(double)); if (!d) return 909; st->sval = d; }
+		c = (double *)realloc(st->ex, (size_t)nc * sizeof(double)); if (!c) return 909; st->ex = c;
+		c = (double *)realloc(st->e1, (size_t)nc * sizeof(double)); if (!c) return 909; st->e1 = c;
+		d = (double *)realloc(st->sval, (size_t)nc * (size_t)st->P * sizeof(double)); if (!d) return 909; st->sval = d;
 		st->cap = nc;
 	}
 	return 0;
@@ -124,16 +129,22 @@ static int state_add(State *st, nwint j, nwint k) {
 	st->pj[st->np] = (int32_t)j;
 	st->pk[st->np] = (int32_t)k;
 	*slot = (int32_t)st->np;
+	st->sig[st->np] = 0.0;
 	st->np++;
 	return 0;
 }
 
-static int state_init(const Spec *sp, State *st, int NS) {
+static int state_init(const Spec *sp, State *st, int NS, const double *theta) {
 	nwint n = sp->n;
 	size_t nn = (size_t)n * (size_t)n, un = (size_t)n;
+	int p;
 	memset(st, 0, sizeof(State));
 	st->n = n;
 	st->NS = NS;
+	st->P = sp->P;
+	st->sp = sp;
+	st->theta = theta;
+	for (p = 0; p < sp->P; p++) { st->eff[p] = sp->eff[p]; st->hS[p] = part_S(sp->eff[p]); }
 	st->has7 = has_e(sp, 7); st->has8 = has_e(sp, 8); st->has12 = has_e(sp, 12); st->has13 = has_e(sp, 13); st->has14 = has_e(sp, 14);
 	st->ocnt = (double *)calloc(un, sizeof(double));
 	st->icnt = (double *)calloc(un, sizeof(double));
@@ -206,6 +217,34 @@ static double sval_one(const Spec *sp, const State *st, int e, nwint j, nwint k)
 	return 0.0;
 }
 
+/* statistics, sigma, exp(sigma), expm1(sigma) of the sparse dyad at position pos in the current state */
+static void refresh_pair(State *st, nwint pos) {
+	nwint j = st->pj[pos], k = st->pk[pos];
+	double sg = 0.0, *sv = st->sval + (size_t)pos * (size_t)st->P;
+	int p;
+	if (st->sig[pos] > 700.0) st->nbig--;
+	for (p = 0; p < st->P; p++) {
+		if (st->hS[p]) {
+			double v = sval_one(st->sp, st, st->eff[p], j, k);
+			sv[p] = v;
+			sg += st->theta[p] * v;
+		}
+		else sv[p] = 0.0;
+	}
+	st->sig[pos] = sg;
+	if (sg > 700.0) { st->ex[pos] = 0.0; st->e1[pos] = 0.0; st->nbig++; }   /* the fast evaluator gives up when it meets sigma > 700 */
+	else { double e1 = expm1(sg); st->e1[pos] = e1; st->ex[pos] = 1.0 + e1; }
+}
+
+/* after an event only the rows of the sender and the receiver change */
+static void refresh_row(State *st, nwint j) {
+	nwint k, n = st->n;
+	for (k = 0; k < n; k++) {
+		int32_t ps = st->pidx[j * n + k];
+		if (ps >= 0) refresh_pair(st, (nwint)ps);
+	}
+}
+
 /* out[j] = sum over k != j of x[k] (prefix and suffix sums, no subtraction) */
 static void excl_sum(const double *x, double *out, nwint n) {
 	nwint j;
@@ -220,13 +259,13 @@ static void excl_sum(const double *x, double *out, nwint n) {
    ------------------------------------------------------------------ */
 static int run(const Spec *sp, const double *theta, int todo, int dense, double *ll, double *g, double *H, double *Exx) {
 	nwint n = sp->n, m = sp->m, i, j, k, pos;
-	int P = sp->P, p, q, t, NS = 0, SE[NEFF], slot[NEFF], rc = 0;
+	int P = sp->P, p, q, NS = 0, rc = 0;
 	int hA[NEFF], hB[NEFF], hS[NEFF];
 	State st;
 	double *od, *idg, *td, *buf;
-	const double **A, **B;
-	double *a, *b, *ea, *eb, *XB1, *XA1, *tmp, *XBw, *ws = NULL;
-	double *Esep, *Esup, *xs, *xp, *ys, *Ea, *gacc, *Esep2, *Hsup, *E2;
+	const double **A, **B, **Ap, **Bp;
+	double *a, *b, *ea, *eb, *XB1, *XA1, *tmp, *zero, *XBw, *ws = NULL;
+	double *Esep, *Esup, *xs, *xp, *ys, *Ea, *gacc, *Esep2, *Hsup, *E2, *IA, *IB;
 	double fb = 1.0 / (double)(n - 1), lltot = 0.0;
 	int needshare;
 	size_t unn = (size_t)n, uP = (size_t)P, wsn;
@@ -234,24 +273,25 @@ static int run(const Spec *sp, const double *theta, int todo, int dense, double 
 	for (p = 0; p < P; p++) {
 		int e = sp->eff[p];
 		hA[p] = part_A(e); hB[p] = part_B(e); hS[p] = part_S(e);
-		slot[p] = -1;
-		if (hS[p]) { slot[p] = NS; SE[NS++] = p; }
+		if (hS[p]) NS++;
 	}
 	memset(&st, 0, sizeof(State));
 	A = NULL; B = NULL;
-	if (state_init(sp, &st, NS)) { state_free(&st); return 909; }
+	if (state_init(sp, &st, NS, theta)) { state_free(&st); return 909; }
+	for (pos = 0; pos < st.np; pos++) refresh_pair(&st, pos);
 	needshare = 0;
 	for (p = 0; p < P; p++) { int e = sp->eff[p]; if (e >= 1 && e <= 6) needshare = 1; }
 	/* one workspace: 12 vectors of n (shares, fallback parts, a, b, ea, eb, XB1, XA1, tmp), P vectors XBw, small arrays */
-	wsn = unn * 12 + unn * uP + uP * 8 + uP * uP * 3;
+	wsn = unn * 13 + unn * uP + 2 * unn * uP + uP * 8 + uP * uP * 3;
 	ws = (double *)calloc(wsn, sizeof(double));
 	A = (const double **)calloc(uP, sizeof(double *)); B = (const double **)calloc(uP, sizeof(double *));
-	if (!ws || !A || !B) { rc = 909; free(ws); free(A); free(B); state_free(&st); return rc; }
+	Ap = (const double **)calloc(uP, sizeof(double *)); Bp = (const double **)calloc(uP, sizeof(double *));
+	if (!ws || !A || !B || !Ap || !Bp) { rc = 909; free(ws); free(A); free(B); free(Ap); free(Bp); state_free(&st); return rc; }
 	od = ws; idg = od + n; td = idg + n; buf = td + n;          /* buf: 2 vectors */
 	a = buf + 2 * n; b = a + n; ea = b + n; eb = ea + n; XB1 = eb + n; XA1 = XB1 + n; tmp = XA1 + n;
-	XBw = tmp + n;
+	zero = tmp + n; XBw = zero + n;
 	Esep = XBw + unn * uP; Esup = Esep + uP; xs = Esup + uP; xp = xs + uP; ys = xp + uP; Ea = ys + uP; gacc = Ea + uP;
-	Esep2 = gacc + uP; Hsup = Esep2 + uP * uP; E2 = Hsup + uP * uP;
+	Esep2 = gacc + uP; Hsup = Esep2 + uP * uP; E2 = Hsup + uP * uP; IA = E2 + uP * uP; IB = IA + unn * uP;
 	{
 		for (p = 0; p < P; p++) {
 			int e = sp->eff[p];
@@ -263,7 +303,8 @@ static int run(const Spec *sp, const double *theta, int todo, int dense, double 
 			if (e == 1 || e == 3 || e == 5) A[p] = (e == 1 ? od : (e == 3 ? idg : td));
 			if (e == 2 || e == 4 || e == 6) B[p] = (e == 2 ? idg : (e == 4 ? od : td));
 		}
-		if (todo >= 2) for (p = 0; p < P * P; p++) H[p] = 0.0;
+		for (p = 0; p < P; p++) { Ap[p] = hA[p] ? A[p] : zero; Bp[p] = hB[p] ? B[p] : zero; }
+			if (todo >= 2) for (p = 0; p < P * P; p++) H[p] = 0.0;
 		if (Exx) for (p = 0; p < P; p++) Exx[p] = 0.0;
 		for (i = 0; i < m; i++) {
 			nwint s = (nwint)sp->ev[2 * i] - 1, r = (nwint)sp->ev[2 * i + 1] - 1;
@@ -289,17 +330,6 @@ static int run(const Spec *sp, const double *theta, int todo, int dense, double 
 			for (p = 0; p < P; p++) {
 				if (hA[p]) { const double *u = A[p]; double th = theta[p]; for (j = 0; j < n; j++) a[j] += th * u[j]; }
 				if (hB[p]) { const double *w = B[p]; double th = theta[p]; for (j = 0; j < n; j++) b[j] += th * w[j]; }
-			}
-			/* per sparse dyad: statistics and sigma */
-			for (pos = 0; pos < st.np; pos++) {
-				nwint pj = st.pj[pos], pk = st.pk[pos];
-				double sg = 0.0;
-				for (t = 0; t < NS; t++) {
-					double v = sval_one(sp, &st, sp->eff[SE[t]], pj, pk);
-					st.sval[pos * NS + t] = v;
-					sg += theta[SE[t]] * v;
-				}
-				st.sig[pos] = sg;
 			}
 			/* the realised dyad */
 			for (p = 0; p < P; p++) {
@@ -343,26 +373,30 @@ static int run(const Spec *sp, const double *theta, int todo, int dense, double 
 						Esep2[(size_t)p * P + q] = s2;
 					}
 				}
-				/* the sparse correction */
+				/* the sparse correction: the sender and receiver parts of all effects of an actor side by side */
+				if (st.np > 0) for (j = 0; j < n; j++) for (p = 0; p < P; p++) { IA[j * uP + p] = Ap[p][j]; IB[j * uP + p] = Bp[p][j]; }
 				for (p = 0; p < P; p++) Esup[p] = 0.0;
 				for (p = 0; p < P * P; p++) Hsup[p] = 0.0;
+				if (st.nbig > 0) { rc = 1; goto done; }
 				for (pos = 0; pos < st.np; pos++) {
 					nwint pj = st.pj[pos], pk = st.pk[pos];
-					double mu = ea[pj] * eb[pk], sg = st.sig[pos], ex, e1, om;
-					if (sg > 700.0) { rc = 1; goto done; }
-					ex = exp(sg); e1 = expm1(sg); om = mu * ex;
-					Zc += mu * e1;
+					double mu = ea[pj] * eb[pk], om, nu;
+					const double *sv = st.sval + (size_t)pos * uP, *ia = IA + pj * uP, *ib = IB + pk * uP;
+					om = mu * st.ex[pos];
+					nu = mu * st.e1[pos];
+					Zc += nu;
 					for (p = 0; p < P; p++) {
-						double x = 0.0;
-						if (hA[p]) x += A[p][pj];
-						if (hB[p]) x += B[p][pk];
+						double x = ia[p] + ib[p];
 						xp[p] = x;
-						ys[p] = x + (hS[p] ? st.sval[pos * NS + slot[p]] : 0.0);
+						ys[p] = x + sv[p];
 						Esup[p] += om * ys[p] - mu * x;
 					}
 					if (todo >= 2 || Exx) {
-						for (p = 0; p < P; p++) for (q = p; q < P; q++)
-							Hsup[(size_t)p * P + q] += om * ys[p] * ys[q] - mu * xp[p] * xp[q];
+						for (p = 0; p < P; p++) {
+							double yp = om * ys[p], xq = mu * xp[p];
+							double *hrow = Hsup + (size_t)p * P;
+							for (q = p; q < P; q++) hrow[q] += yp * ys[q] - xq * xp[q];
+						}
 					}
 				}
 				Zt = Z0 + Zc;
@@ -397,7 +431,7 @@ static int run(const Spec *sp, const double *theta, int todo, int dense, double 
 							double x = 0.0;
 							if (hA[p]) x += A[p][j];
 							if (hB[p]) x += B[p][k];
-							if (hS[p] && ps >= 0) x += st.sval[(size_t)ps * NS + slot[p]];
+							if (hS[p] && ps >= 0) x += st.sval[(size_t)ps * uP + p];
 							ys[p] = x;
 							Ea[p] += w * x;
 						}
@@ -414,13 +448,14 @@ static int run(const Spec *sp, const double *theta, int todo, int dense, double 
 			if (todo >= 2) for (p = 0; p < P; p++) for (q = p; q < P; q++) H[p * P + q] -= E2[(size_t)p * P + q] - Ea[p] * Ea[q];
 			if (Exx) for (p = 0; p < P; p++) Exx[p] += E2[(size_t)p * P + p];
 			if (state_update(&st, s, r)) { rc = 909; goto done; }
+			if (st.has7 || st.has8 || st.has13 || st.has14) { refresh_row(&st, s); refresh_row(&st, r); }   /* the dyadic statistics of the other effects are static */
 		}
 		*ll = lltot;
 		for (p = 0; p < P; p++) g[p] = gacc[p];
 		if (todo >= 2) for (p = 0; p < P; p++) for (q = p + 1; q < P; q++) H[q * P + p] = H[p * P + q];
 	}
 done:
-	free(ws); free(A); free(B);
+	free(ws); free(A); free(B); free(Ap); free(Bp);
 	state_free(&st);
 	return rc;
 }
@@ -443,7 +478,7 @@ static int spec_read(Spec *sp, nwint L) {
 	sp->n = (nwint)sp->blob[1];
 	sp->m = (nwint)sp->blob[2];
 	for (k = 0; k < NEFF; k++) sp->act[k] = sp->blob[3 + k] != 0.0;
-	if (sp->n < 3 || sp->m < 1) return 198;
+	if (sp->n < 2 || sp->m < 1) return 198;
 	if (sp->n * sp->n > 2000000000LL) { SF_error("rem_sim: too many actors\n"); return 198; }
 	pos = HDR;
 	sp->ev = sp->blob + pos; pos += 2 * sp->m;
