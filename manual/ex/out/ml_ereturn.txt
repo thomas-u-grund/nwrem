@@ -1,0 +1,25 @@
+. ereturn list
+
+scalars:
+                  e(N) =  631
+              e(nodes) =  144
+                 e(ll) =  -5531.783319413064
+           e(deviance) =  11063.56663882613
+               e(ll_0) =  -6267.507153726425
+               e(df_m) =  4
+             e(N_cond) =  0
+                e(aic) =  11071.56663882613
+               e(aicc) =  11071.63053658971
+                e(bic) =  11089.3558622763
+
+macros:
+             e(depvar) : "mail"
+                e(lik) : "ordinal"
+              e(title) : "Relational event model (ordinal partial likelihood, .."
+            e(version) : "1.4.0"
+                e(cmd) : "nwrem"
+         e(properties) : "b V"
+
+matrices:
+                  e(b) :  1 x 4
+                  e(V) :  4 x 4

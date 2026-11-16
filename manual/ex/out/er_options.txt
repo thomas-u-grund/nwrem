@@ -1,0 +1,30 @@
+. capture noisily nwrem mail, nodsnd starttime(3)
+starttime() and endtime() belong to the waiting-time likelihood: add the option
+interval.
+invalid syntax
+
+. display "return code: " _rc
+return code: 198
+
+. capture noisily nwrem mail, nodsnd priorscale(2)
+priormean(), priorscale() and priordf() belong to posterior-mode estimation: add
+the option postmode.
+invalid syntax
+
+. display "return code: " _rc
+return code: 198
+
+. capture noisily nwrem mail, nodsnd condition(-1)
+condition() must be a non-negative integer (the number of leading events that only
+>  build the history)
+invalid syntax
+
+. display "return code: " _rc
+return code: 198
+
+. capture noisily nwrem mail, nodsnd seed(-1)
+seed() must be an integer between 0 and 2147483647
+invalid syntax
+
+. display "return code: " _rc
+return code: 198

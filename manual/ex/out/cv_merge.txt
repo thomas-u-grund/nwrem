@@ -1,0 +1,44 @@
+. gen str4 label = _nwnode
+
+. gen long row = _n
+
+. merge m:1 label using `staff', keep(master match) nogenerate
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                               144  
+    -----------------------------------------
+
+. sort row
+
+. gen byte junior = (level >= 4)
+
+. list _nwnode level junior supervisor division in 1/4
+
+     +------------------------------------------------+
+     | _nwnode   level   junior   superv~r   division |
+     |------------------------------------------------|
+  1. |    E102       2        0        E36        E36 |
+  2. |    E103       2        0        E85        E85 |
+  3. |    E104       1        0        E86       E104 |
+  4. |    E105       2        0       E104       E104 |
+     +------------------------------------------------+
+
+. tabulate level
+
+   Steps to |
+ the CEO in |
+        the |
+  reporting |
+  hierarchy |
+  (0 = CEO) |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |          1        0.69        0.69
+          1 |         11        7.64        8.33
+          2 |         59       40.97       49.31
+          3 |         29       20.14       69.44
+          4 |         43       29.86       99.31
+          5 |          1        0.69      100.00
+------------+-----------------------------------
+      Total |        144      100.00

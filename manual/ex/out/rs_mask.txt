@@ -1,0 +1,20 @@
+. mata:
+------------------------------------------------- mata (type end to exit) --------
+: D = st_sdata(., "division")
+
+: n = rows(D)
+
+: M = J(n, n, 0)
+
+: for (i = 1; i <= n; i++) {
+>     for (j = 1; j <= n; j++) M[i, j] = (i != j) & (D[i] == D[j])
+> }
+
+: end
+----------------------------------------------------------------------------------
+
+. nwset, mat(M) name(samediv) directed
+
+. mata: printf("ordered pairs that can be events: %g of %g\n", sum(M), n * (n - 1)
+> )
+ordered pairs that can be events: 6664 of 20592

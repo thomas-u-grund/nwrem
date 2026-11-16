@@ -1,0 +1,35 @@
+. count
+  67
+
+. display "actors: $allact"
+actors: E128 E136 E137 E152 E166 E17 E47 E60 E62 E65 E81 E90
+
+. quietly levelsof sender, local(sn) clean
+
+. quietly levelsof receiver, local(rn) clean
+
+. local nsend : list global(allact) - sn
+
+. local nrec : list global(allact) - rn
+
+. display "never send: `nsend'   never receive: `nrec'"
+never send: E137 E60   never receive: E17
+
+. nwbuild core12
+
+. nwsummarize core12
+--------------------------------------------------
+   Network name:  core12
+   Network id:  1
+   Directed: true
+   Valued: false
+   Two-mode: false
+   Nodes: 12
+   Selfloop: false
+   Arcs: 27
+   Minimum value:  0
+   Maximum value:  1
+   Density:  .205
+   Mean outdegree:  2.25
+   Temporal: true
+      Temporal type: event

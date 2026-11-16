@@ -1,0 +1,25 @@
+. test_nwrem_relevent14   (the first 10 of the 60 case lines, in columns)
+case   exact route: coef, se, log lik.  |  rem.dyad(): coef, se
+a1      2.22e-09  1.14e-10  1.16e-15  |   3.40e-08  2.92e-07
+a2      2.35e-06  1.06e-07  3.37e-14  |   2.32e-06  1.88e-07
+a3      1.04e-07  7.21e-09  3.96e-16  |   5.57e-08  6.36e-08
+b1      4.17e-08  9.91e-09  8.41e-16  |   1.12e-07  2.00e-08
+b2      1.80e-08  4.25e-09  3.04e-15  |   1.86e-08  7.01e-08
+b3      4.72e-08  9.51e-09  2.64e-15  |   1.02e-07  2.08e-08
+b4      6.80e-11  1.79e-11  1.52e-15  |   1.37e-07  7.86e-08
+b5      3.47e-09  1.22e-09  1.79e-15  |   1.18e-07  8.32e-08
+b6      3.09e-13  3.59e-14  5.14e-15  |   6.08e-08  3.61e-08
+b7      2.03e-07  7.30e-08  3.54e-14  |   2.93e-07  3.61e-08
+
+PASS: nwrem agrees with relevent in all 60 cases
+test_nwrem_relevent14: ALL OK
+
+. test_nwrem_collinear14  (the first 5 of the 39 case lines)
+col1     parameters   8  omitted   6   same
+col2     parameters   8  omitted   6   same
+col3     parameters   8  omitted   6   same
+col4     parameters   8  omitted   6   same
+col5     parameters   8  omitted   5   same
+
+PASS: the omitted coefficients agree with the reference in all 39 cases (76 omitted coefficients in all)
+test_nwrem_collinear14: ALL OK

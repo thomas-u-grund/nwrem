@@ -1,0 +1,56 @@
+\chapter{Stored results and comparing models}\label{ch:results}
+
+\section{Stored results}\label{sec:stored}
+
+\texttt{nwrem} is an estimation command. It stores the following in \texttt{e()}.
+\footnotesize
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{4.2cm}>{\raggedright\arraybackslash}p{11.5cm}@{}}
+\toprule
+Result & Contents\\
+\midrule\endhead
+\multicolumn{2}{@{}l}{\textit{Scalars}}\\
+\texttt{e(N)} & Number of events, including the conditioned events.\\
+\texttt{e(nodes)} & Number of actors.\\
+\texttt{e(ll)} & Log likelihood at the estimates; with \opt{postmode} without the prior.\\
+\texttt{e(ll\_0)} & Log likelihood of the model without effects (Section~\ref{sec:estimation}). Not stored with \opt{interval} when a risk set, \opt{entry()} or \opt{exit()} is used.\\
+\texttt{e(df\_m)} & Number of estimated coefficients (the omitted ones are not counted).\\
+\texttt{e(deviance)} & $-2\,$\texttt{e(ll)}.\\
+\texttt{e(aic)}, \texttt{e(aicc)}, \texttt{e(bic)} & Information criteria: $\mathrm{AIC}=\text{deviance}+2k$, $\mathrm{AICc}=\mathrm{AIC}+2k(k+1)/(\nu-k-1)$ (stored only if $\nu-k-1>0$), $\mathrm{BIC}=\text{deviance}+k\ln\nu$, with $k$ the number of coefficients and $\nu$ the number of events that enter the likelihood ($\nu=$\texttt{e(N)}$-$\texttt{e(N\_cond)}, and one less with \opt{interval}).\\
+\texttt{e(N\_cond)} & Number of events that only build the history (\opt{condition()}).\\
+\texttt{e(starttime)}, \texttt{e(endtime)} & Observation window with \opt{interval}; \texttt{e(endtime)} only if \opt{endtime()} was given.\\
+\texttt{e(priormean)}, \texttt{e(priorscale)}, \texttt{e(priordf)} & The prior of \opt{postmode}.\\
+\multicolumn{2}{@{}l}{\textit{Macros}}\\
+\texttt{e(cmd)} & \texttt{nwrem}\\
+\texttt{e(version)} & Release of \nwrem{} that produced the results.\\
+\texttt{e(title)} & ``Relational event model ('' likelihood and estimator ``)''.\\
+\texttt{e(lik)} & \texttt{ordinal} or \texttt{interval}.\\
+\texttt{e(depvar)} & Name of the event network.\\
+\texttt{e(unidentified)} & Effects without a usable standard error: left out because they are exactly collinear with others (coefficient 0), or with a standard error above 100; empty when all are identified.\\
+\multicolumn{2}{@{}l}{\textit{Matrices}}\\
+\texttt{e(b)} & Coefficient vector.\\
+\texttt{e(V)} & Covariance matrix, the inverse of minus the Hessian (the observed information); with \opt{postmode}, of the log posterior.\\
+\bottomrule
+\end{longtable}
+\normalsize
+
+\texttt{nwrem version} stores \texttt{r(version)} and \texttt{r(date)} (the release), \texttt{r(core)} (the core version), \texttt{r(plugin)} (the plugin file in use), \texttt{r(reference)} (the version of \relevent{} that the results were compared with) and \texttt{r(license)}.
+\showlog{st_version}
+
+\paragraph{A listing of the stored results.} The model of Section~\ref{sec:firstmodel} with four effects gives the following; \texttt{e(ll)} holds the value that the header prints in a rounded form.
+\showlog{ml_ereturn}
+
+\section{Information criteria and likelihood-ratio tests}
+
+Because \texttt{e(ll)}, \texttt{e(df\_m)} and \texttt{e(N)} are stored, \texttt{estimates stats} and \texttt{lrtest} work. The log likelihood is a proper log likelihood of the ordinal model (or of the waiting-time model), so models for the \emph{same} events with the same likelihood and the same conditioning can be compared by their information criteria, and nested models by a likelihood-ratio test. Models with the ordinal and with the waiting-time likelihood, or with different values of \opt{condition()}, \opt{riskset()} or a different set of actors, are not comparable, because they describe different data. \texttt{estimates stats} computes the BIC with \texttt{e(N)}, which counts conditioned events; without \opt{condition()} it agrees with \texttt{e(bic)}.
+\showlog{ml_compare}
+In this example the model with both the activity effects and the history effects is much better than either of the two submodels: the log likelihood rises from $-5{,}992.5$ (activity) and $-5{,}733.4$ (history) to $-5{,}531.8$.
+
+\paragraph{The likelihood-ratio test against the null model.} \texttt{e(ll\_0)} is the log likelihood without effects, so $2\{\texttt{e(ll)}-\texttt{e(ll\_0)}\}$ is the statistic of the test of all coefficients together, on \texttt{e(df\_m)} degrees of freedom:
+\showlog{ml_ic}
+
+\section{Replaying, the confidence level and reproducibility}
+
+\texttt{nwrem} without arguments redisplays the last fit; \opt{level()} changes the confidence level of the displayed intervals without refitting.
+\showlog{ml_replay}
+The fit is deterministic. It starts at zero and takes Newton steps; the random numbers are used only when the iteration fails to reach a maximum. Two fits with different seeds therefore give identical results:
+\showlogpart{ml_seed}{26}{38}

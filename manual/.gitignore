@@ -1,0 +1,11 @@
+*.aux
+*.toc
+*.out
+*.bbl
+*.blg
+*.lof
+*.lot
+*.log
+ex/ex*.log
+ex/__pycache__/
+__pycache__/

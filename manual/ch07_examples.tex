@@ -1,0 +1,84 @@
+\chapter{Worked examples}\label{ch:examples}
+
+All examples use the e-mail log of Section~\ref{sec:data}. The listings are the output of the do-files in \texttt{manual/ex} (named in each section). The examples show how the options work and how to read the output; they are not a substantive analysis of the company.
+
+\section{History and activity}\label{sec:ex-history}
+
+\emph{ex02\_mail.do.} The first model of Section~\ref{sec:firstmodel} used the activity of the actors. The second asks about the history of the pair: do people write to those they wrote to before (\opt{frpsndsnd}), and to those who wrote to them (\opt{frrecsnd})?
+\showlog{ml_m2}
+If another 10 percentage points of a sender's e-mails had gone to a given person, the rate of the next e-mail going to that person again is multiplied by $\exp(0.317)\approx 1.4$. Replying also raises the rate: for each 10 percentage points of the sender's earlier receipts that came from a given person, the rate of writing to that person is multiplied by $\exp(0.348)\approx 1.4$ as well. The model fits far better than the activity model: the log likelihood is $-5{,}733$ against $-5{,}993$ for the same number of coefficients. Both sets of effects together:
+\showlog{ml_m3}
+Once the activity of the actors is in the model, the inertia effect shrinks (3.17 to 2.30) and the activity effects shrink a little (\opt{nodsnd} from 15.6 to 14.4, \opt{nidrec} from 25.0 to 22.0), while the reciprocity of receipt grows (3.48 to 3.82). All four effects remain clearly different from zero, and the log likelihood rises to $-5{,}531.8$. Part of what looked like ``who writes to whom'' in the second model was activity, and part of what looked like ``busy people stay busy'' in the first was people writing to those they always write to. This is the usual reason for fitting several effects together.
+
+\section{Covariates of actors and of pairs}\label{sec:ex-cov}
+
+\emph{ex03\_cov.do.} The attributes of the employees come from the reporting hierarchy. \texttt{nwload mail, xvars} loads a dataset with one row per actor and the label in \texttt{\_nwnode}; the variables of the second data set are merged to it by label, and the original order is restored because the order of the rows after a merge is not guaranteed.
+\showlog{cv_merge}
+\texttt{level} is the number of steps to the chief executive (0 is the CEO); \texttt{junior} is an indicator that the level is 4 or more. The two options \opt{covsnd(level)} and \opt{covrec(level)} ask whether people lower in the hierarchy send and receive less, over and above the history of the pair:
+\showlog{cv_covsnd}
+Each step down the hierarchy multiplies the rate of sending by $\exp(-0.233)\approx0.79$ and the rate of being written to by $\exp(-0.121)\approx0.89$. With \opt{covint(level)} one coefficient is shared by the sender and the receiver ($z_j+z_k$):
+\showlog{cv_covint}
+\paragraph{Several covariates in one option.} Every variable gets a coefficient. With the continuous level and the indicator together, the junior employees send less (coefficient $-0.417$), and the level, over and above, adds little for the receiver:
+\showlog{cv_several}
+\paragraph{Pair covariates.} A covariate of the pair is a network with the same actors. Here the network \texttt{samesup} has a tie from $i$ to $j$ when the two have the same direct supervisor, and \texttt{samediv} when they belong to the same division. Both are symmetric, and are built from a matrix (see Section~\ref{sec:covevent}). The first fit has one covariate network; the second has both, with one coefficient each.
+\showlogpart{cv_pairs}{27}{69}
+Pairs that share the supervisor have $\exp(0.861)\approx2.4$ times the rate of other pairs at the same history; adding the division reduces this to $\exp(0.698)\approx2.0$ and gives pairs of the same division a further factor of $\exp(0.287)\approx1.3$. (The names in the table are shortened by Stata's display; the stored names are \texttt{covevent\_samesup} and \texttt{covevent\_samediv}.)
+
+\paragraph{Collinear covariates.} \opt{covint} is the sum of \opt{covsnd} and \opt{covrec} of the same variable, so the three cannot be estimated together. The last one in the order of Table~\ref{tab:effects} is left out:
+\showlog{cv_collinear}
+The note under the table is the general note of the command (Section~\ref{sec:collinear}); the coefficient of the omitted effect is 0. A missing value of a covariate stops the fit:
+\showlog{cv_missing}
+
+\section{The waiting-time likelihood}\label{sec:ex-interval}
+
+\emph{ex04\_interval.do.} Some e-mails of the log carry the same time: three pairs of e-mails in the first five days. The ordinal likelihood accepts such ties, and keeps the order of the rows; the waiting-time likelihood needs strictly increasing times and refuses them:
+\showlog{iv_ties}
+For the comparison we drop the later e-mail of each tie (628 events remain) and fit the ordinal model:
+\showlog{iv_ordinal}
+\paragraph{The time unit matters.} With \opt{interval} the time enters the likelihood. The model has no baseline rate: a pair with all statistics zero has the rate 1 per unit of time. With the time in days, a typical pair has a rate of about $628/(1.8\cdot 144\cdot 143)\approx0.017$ per day, nowhere near 1, and the coefficients of the share effects have to make up for it:
+\showlog{iv_days}
+The huge negative coefficients are not an error of the program; they are the answer to a model in which the time is in a very unsuitable unit. A better unit is the one in which the null model (the same rate for all ordered pairs) has a rate of one: the length of the window times $n(n-1)$, divided by the number of events, here 59 days. With the time divided by this number:
+\showlog{iv_unit}
+Now the coefficients are of the same order as those of the ordinal model; the log likelihood of the null model is $-628$ exactly, as it should be for a unit rate. The waiting-time model uses more information than the ordinal one (the log likelihoods are not comparable between the two likelihoods). Its estimates differ from those of the ordinal model (the inertia effect is 4.73 against 4.22, the activity effects are smaller), because the times carry information of their own:
+\showlog{iv_table}
+Without \opt{endtime()} the observation ends with the last event, and \texttt{e(endtime)} is not stored:
+\showlog{iv_default}
+\paragraph{Conditioning.} \opt{condition(100)} lets the first 100 events build the history and removes them from the likelihood, for both likelihoods. \texttt{e(N)} still counts all 628 events:
+\showlog{iv_cond}
+
+\section{Risk sets, entry and exit}\label{sec:ex-risk}
+
+\emph{ex05\_riskset.do.} Suppose that the question concerns e-mails within the divisions of the company: pairs of employees from different divisions are not part of the risk set. We keep the 277 e-mails of the window that stay within a division (of 631), build the network \texttt{samediv} with a tie for every ordered pair of employees of the same division, and name it in \opt{riskset()}:
+\showlog{rs_cross}
+\showlog{rs_mask}
+\showlog{rs_fit}
+The first fit uses all $144\cdot143=20{,}592$ pairs as the risk set, the second only the 6,664 within-division pairs. The log likelihoods are not comparable, because the sets of alternatives differ. The coefficients differ as well, because every event is now compared with a different set of alternatives. If an event is not in the risk set, \nwrem{} stops:
+\showlog{rs_error}
+\paragraph{Entry and exit.} Per-actor windows are variables of the current dataset. We let the employees of division E85 leave the observation after day 4.0 and those of division E70 join it on day 3.6. An event after the exit time of one of its actors is an error:
+\showlog{rs_exit}
+We drop the events that violate the windows (569 events remain), and fit the model first with the complete risk set and then with the windows:
+\showlog{rs_window}
+
+\section{Posterior mode}\label{sec:ex-post}
+
+\emph{ex06\_postmode.do.} With the default prior (a Student $t$ with four degrees of freedom and scale 100) the posterior mode is almost the maximum likelihood estimate. A normal prior of scale 2 pulls the large share coefficients towards zero, a normal prior of scale 0.5 around 3 pulls them towards 3.
+\showlog{pm_table}
+The log likelihoods are those of the likelihood at the mode, without the prior, so they fall as the prior pulls the estimates away from the maximum. The four fits are made in \texttt{ex06\_postmode.do}; the table shows the estimates and standard errors of each.
+
+\section{Triadic, recency, fixed and participation effects}\label{sec:ex-more}
+
+\emph{ex07\_effects.do.} These effects need an event history in which the same pairs recur, so we use the 67 e-mails among the twelve most active employees of the window. Two of the twelve never send and one never receives in these data.
+\showlog{ef_top}
+The shared partners and two-paths:
+\showlog{ef_triad}
+The coefficient of \opt{ospsnd}, the symmetric number of shared out-partners (the number of colleagues to whom both have written), is positive: pairs with more shared recipients have a higher rate. Recency, in the presence of frequency:
+\showlog{ef_recency}
+In these 67 e-mails, once the recency of the last contact is in the model, the frequency of contact (\opt{frpsndsnd}) has a negative coefficient: the person to whom a sender has written most often is not the one to whom the next message tends to go; the most recent partner is. The fixed effects of the senders:
+\showlog{ef_fe}
+Two actors that never send have a coefficient that would tend to minus infinity; the program stops at a large negative value, the standard error is huge, and the note appears. With the sender effects alone, the estimate of an actor is the logarithm of the ratio of the number of e-mails it sent to the number sent by the first actor, so actors with the same number of e-mails have identical coefficients. A normal prior of scale 2 (\opt{postmode priordf(.) priorscale(2)}) gives finite, estimable values:
+\showlog{ef_fepost}
+The fixed effects of the receivers, with a degree effect of the sender:
+\showlog{ef_feint}
+The participation shifts describe how the next event follows the previous one. The pair that repeats the previous event is the reference category:
+\showlog{ef_ps}
+The reply $B\to A$ (\opt{psabba}) has a coefficient not different from zero, and all the other shifts are negative: relative to a repetition of the previous event, every other kind of event is less likely. The coefficient of \opt{psabxa} (someone else writes to the previous sender) is not identified because it does not occur in these data.

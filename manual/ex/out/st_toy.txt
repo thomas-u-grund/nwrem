@@ -1,0 +1,48 @@
+. clear
+
+. input sender receiver t
+
+        sender   receiver          t
+  1. 1 2 1
+  2. 1 3 2
+  3. 2 1 3
+  4. 1 2 4
+  5. 3 2 5
+  6. 2 3 6
+  7. 1 3 7
+  8. 3 1 8
+  9. 2 1 9
+ 10. 1 3 10
+ 11. end
+
+. nwset sender receiver, directed eventtime(t) name(chat)
+
+. nwsummarize chat
+--------------------------------------------------
+   Network name:  chat
+   Network id:  1
+   Directed: true
+   Valued: false
+   Two-mode: false
+   Nodes: 3
+   Selfloop: false
+   Arcs: 6
+   Minimum value:  1
+   Maximum value:  1
+   Density:  1
+   Mean outdegree:  2.00
+   Temporal: true
+      Temporal type: event
+
+. nwrem chat, nodsnd nidrec
+------------------------------------------------------------
+Relational event model (ordinal partial likelihood, MLE)
+Network: chat                          Actors: 3
+Events: 10                             Log likelihood:  -15.9033
+------------------------------------------------------------
+------------------------------------------------------------------------------
+        chat | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+      nodsnd |   1.268585   1.354195     0.94   0.349    -1.385588    3.922759
+      nidrec |  -5.567766   3.511139    -1.59   0.113    -12.44947    1.313941
+------------------------------------------------------------------------------

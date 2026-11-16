@@ -1,0 +1,26 @@
+. keep if t < 5
+(49,602 observations deleted)
+
+. duplicates report t
+
+Duplicates in terms of t
+
+--------------------------------------
+   Copies | Observations       Surplus
+----------+---------------------------
+        1 |          625             0
+        2 |            6             3
+--------------------------------------
+
+. tempfile ev
+
+. quietly save `ev'
+
+. nwbuild mail
+
+. capture noisily nwrem mail, nodsnd nidrec frpsndsnd interval
+nwrem: the interval likelihood needs strictly increasing event times; events at
+the same time have equal times.
+
+. display "return code: " _rc
+return code: 459

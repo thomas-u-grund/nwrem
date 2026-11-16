@@ -1,0 +1,14 @@
+. estimates stats
+
+Akaike's information criterion and Bayesian information criterion
+
+-----------------------------------------------------------------------------
+       Model |          N   ll(null)  ll(model)      df        AIC        BIC
+-------------+---------------------------------------------------------------
+           . |        631  -6267.507  -5531.783       4   11071.57   11089.36
+-----------------------------------------------------------------------------
+Note: BIC uses N = number of observations. See [R] BIC note.
+
+. display "likelihood ratio against the model without effects: " %7.2f 2*(e(ll) - 
+> e(ll_0)) " on " e(df_m) " d.f."
+likelihood ratio against the model without effects: 1471.45 on 4 d.f.

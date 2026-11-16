@@ -1,0 +1,28 @@
+. quietly use `ev', clear
+
+. count if t > 4 & (divs == "E85" | divr == "E85")
+  28
+
+. count if t < 3.6 & (divs == "E70" | divr == "E70")
+  34
+
+. quietly nwload mail, xvars
+
+. quietly gen actor = _nwnode
+
+. quietly gen long row = _n
+
+. quietly merge m:1 actor using `staff', keep(master match) nogenerate
+
+. quietly sort row
+
+. quietly gen double leave = 4 if division == "E85"
+
+. quietly gen double join = 3.6 if division == "E70"
+
+. capture noisily nwrem mail, nodsnd nidrec exit(leave)
+nwrem: event 423 of the sorted event sequence involves an actor outside its
+entry() / exit() window.
+
+. display "return code: " _rc
+return code: 459

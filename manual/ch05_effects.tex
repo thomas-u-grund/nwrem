@@ -1,0 +1,85 @@
+\chapter{The effects}\label{ch:effects}
+
+This chapter defines every effect precisely. An effect is a statistic $x_p(j,k;h_i)$ of the ordered pair $(j,k)$, sender $j$ and receiver $k$, computed from the history $h_i$ before event~$i$ (equation~(\ref{eq:rate})). All 14 effects of the original framework, the triadic effects, the fixed effects and the participation shifts are evaluated in the plugin. The coefficients appear in the output in the order of Table~\ref{tab:effects}.
+
+\section{Notation and conventions}\label{sec:conventions}
+
+At event~$i$ let $q=i-1$ be the number of earlier events. Let $a(j)$ be the number of earlier events with sender $j$ (the out-count), $b(j)$ the number with receiver $j$ (the in-count), and $c(j,k)$ the number of earlier events from $j$ to $k$. All counts include the conditioned events (\opt{condition()}), and they do not depend on the risk set, on the likelihood and on the coefficients. Repeated events between the same pair count again. Events with the same time are in the order of the network, so an event sees the earlier-listed events of its own time. The number $n$ is the number of actors of the network, including the isolates added with \texttt{nwaddnodes}.
+
+\paragraph{The first event.} Before any event has happened there is no history. At the first event every degree share and every inertia statistic is defined as $1/(n-1)$ for all actors; the same value for all pairs is irrelevant for the ordinal likelihood, and for the waiting-time likelihood it only enters the rate of the first interval. All other statistics are zero.
+
+\begin{table}[t]
+\centering\footnotesize\renewcommand{\arraystretch}{1.3}
+\caption{The effects in the order of the coefficients.}\label{tab:effects}
+\begin{tabular}{@{}rllp{7.6cm}@{}}
+\toprule
+\# & Option & Coefficients & Statistic $x(j,k)$\\
+\midrule
+1 & \opt{nodsnd} & 1 & $a(j)/q$\\
+2 & \opt{nidrec} & 1 & $b(k)/q$\\
+3 & \opt{nidsnd} & 1 & $b(j)/q$\\
+4 & \opt{nodrec} & 1 & $a(k)/q$\\
+5 & \opt{ntdegsnd} & 1 & $\{a(j)+b(j)\}/(2q)$\\
+6 & \opt{ntdegrec} & 1 & $\{a(k)+b(k)\}/(2q)$\\
+7 & \opt{frpsndsnd} & 1 & $c(j,k)/a(j)$\\
+8 & \opt{frrecsnd} & 1 & $c(k,j)/b(j)$\\
+9 & \opt{covsnd(varlist)} & one per variable & $z_j$\\
+10 & \opt{covrec(varlist)} & one per variable & $z_k$\\
+11 & \opt{covint(varlist)} & one per variable & $z_j+z_k$\\
+12 & \opt{covevent(netlist)} & one per network & $w_{jk}$\\
+13 & \opt{rsndsnd} & 1 & $1/\text{rank of }k\text{ among the receivers of }j$\\
+14 & \opt{rrecsnd} & 1 & $1/\text{rank of }k\text{ among the senders to }j$\\
+15 & \opt{otpsnd} & 1 & $\sum_{l}\min\{c(j,l),c(l,k)\}$\\
+16 & \opt{itpsnd} & 1 & $\sum_{l}\min\{c(k,l),c(l,j)\}$\\
+17 & \opt{ospsnd} & 1 & $\sum_{l}\min\{c(j,l),c(k,l)\}$\\
+18 & \opt{ispsnd} & 1 & $\sum_{l}\min\{c(l,j),c(l,k)\}$\\
+19 & \opt{fesnd} & $n-1$ & $1\{j=u\}$ for $u=2,\dots,n$\\
+20 & \opt{ferec} & $n-1$ & $1\{k=u\}$ for $u=2,\dots,n$\\
+21 & \opt{feint} & $n-1$ & $1\{j=u\text{ or }k=u\}$ for $u=2,\dots,n$\\
+22 & \opt{psabba} & 1 & previous event $A\to B$: pair is $(B,A)$\\
+23 & \opt{psabby} & 1 & pair is $(B,y)$, $y\neq A$\\
+24 & \opt{psabxa} & 1 & pair is $(x,A)$, $x\neq B$\\
+25 & \opt{psabxb} & 1 & pair is $(x,B)$, $x\neq A$\\
+26 & \opt{psabxy} & 1 & pair is $(x,y)$ with $x,y\notin\{A,B\}$\\
+27 & \opt{psabay} & 1 & pair is $(A,y)$, $y\neq B$\\
+\bottomrule
+\end{tabular}
+
+\smallskip
+\raggedright\footnotesize The sums run over the actors $l$ other than the two of the pair. $z$ is a covariate of the actors, $w$ the tie value of a covariate network. The shares divide by $q$ and, at the first event, are $1/(n-1)$ (Section~\ref{sec:conventions}); a ratio with a zero denominator is $1/(n-1)$ for $a(j)=0$ or $b(j)=0$.
+\end{table}
+
+\section{Degree effects}
+
+The six degree effects are \emph{shares} of the activity so far. \opt{nodsnd} is the share of the earlier events in which the sender was the sender, \opt{nidrec} the share in which the receiver was the receiver. \opt{nidsnd} and \opt{nodrec} cross the roles: the share of earlier events in which the \emph{sender} was a receiver, and in which the \emph{receiver} was a sender. \opt{ntdegsnd} and \opt{ntdegrec} are the total degree: half the sum of the out-share and the in-share (the average of the two shares, as \texttt{NTDegSnd} and \texttt{NTDegRec} of \relevent{}). Because the shares sum to one over the actors, they move towards $1/n$ for everyone as the history grows. The effects describe the \emph{persistent} activity of an actor: a positive \opt{nodsnd} means that actors who have been the senders of a larger share of the history tend to be the senders of the next event.
+
+\section{Inertia and reciprocity of receipt}
+
+\opt{frpsndsnd} is the fraction of the sender's own past sends that went to this receiver, $c(j,k)/a(j)$: inertia, the tendency to keep writing to the same people. \opt{frrecsnd} is the fraction of the sender's past receipts that came from this receiver, $c(k,j)/b(j)$: reciprocity, the tendency to answer the people who wrote to you. For a sender without past sends (or without past receipts) the statistic is $1/(n-1)$ for every receiver.
+
+\section{Recency effects}
+
+The recency effects measure how \emph{recently}, not how often, a partner was met. For \opt{rsndsnd} the actors to whom the sender $j$ has sent are ordered by the time of the last such event, the most recent first. The statistic of the pair $(j,k)$ is the reciprocal of the rank of $k$ in this list: $1$ for the receiver of the sender's last event, $1/2$ for the receiver before, and so on; it is $0$ if $j$ has never sent to $k$. A repeated send moves the receiver to the front. \opt{rrecsnd} is the same for the actors who have sent to $j$: the reciprocal rank of $k$ among the senders to $j$, the most recent first; it is a recency-based reciprocity effect. A sender who contacted a partner once, very recently, scores as high on \opt{rsndsnd} for that partner as one who contacted them constantly and most recently: only the order matters, not the count. This is the difference from \opt{frpsndsnd} and \opt{frrecsnd}, which measure how often.
+
+\section{Covariates}\label{sec:cov-def}
+
+\opt{covsnd(varlist)} gives a pair the value $z_j$ of a variable of the sender, \opt{covrec(varlist)} the value $z_k$ of the receiver, \opt{covint(varlist)} the sum $z_j+z_k$; each variable has its own coefficient. \opt{covint} is therefore an exact function of \opt{covsnd} and \opt{covrec} of the same variable, and these three cannot be fitted together (Section~\ref{sec:collinear}). The coefficient of \opt{covsnd(x)} is the log rate ratio for a sender whose $x$ is one unit larger; it is an \emph{ego} effect. \opt{covrec} is an \emph{alter} effect. The values do not change in time. \opt{covevent(netlist)} gives a pair the tie value $w_{jk}$ of a network, one coefficient per network; the cell from sender to receiver is used, so the covariate can be directed.
+
+\section{Triadic and shared-partner effects}\label{sec:triadic}
+
+These effects count the paths through a third actor in the history, weighted by the number of events. For the pair $(j,k)$ and an actor $l$ other than $j$ and~$k$:
+\begin{itemize}[nosep]
+  \item \opt{otpsnd}, outbound two-paths: $j$ has sent to $l$ and $l$ has sent to $k$; the statistic is $\sum_l\min\{c(j,l),c(l,k)\}$, the smaller of the two counts, summed over $l$.
+  \item \opt{itpsnd}, inbound two-paths: the same count for the paths from the receiver through some $l$ to the sender, $\sum_l\min\{c(k,l),c(l,j)\}$.
+  \item \opt{ospsnd}, outbound shared partners: $j$ and $k$ have both sent to $l$, $\sum_l\min\{c(j,l),c(k,l)\}$.
+  \item \opt{ispsnd}, inbound shared partners: both have received from $l$, $\sum_l\min\{c(l,j),c(l,k)\}$.
+\end{itemize}
+\paragraph{\texttt{ospsnd} and \relevent{}.} \opt{otpsnd}, \opt{itpsnd} and \opt{ispsnd} are the statistics of \relevent{}. \opt{ospsnd} is the intended \emph{symmetric} statistic, as above: the value for $(j,k)$ equals the value for $(k,j)$. The statistic computed by \relevent{}~\releventver{} is not symmetric: for a pair of actors it counts the shared out-partners twice for one direction of the pair and not at all for the other, depending on the order in which the actors first appear as senders. Estimates of \nwrem{} for this effect therefore differ from those of \relevent{}; the deviation is intended. Chapter~\ref{ch:validation} states how the effect was checked.
+
+\section{Fixed effects}
+
+\opt{fesnd}, \opt{ferec} and \opt{feint} give each actor, except the first one, a coefficient of its own: an indicator that the actor is the sender (\opt{fesnd}), the receiver (\opt{ferec}), or either of the two (\opt{feint}, one coefficient for the two roles). The first actor, in the actor order of the network, is the reference; the coefficients are named \texttt{fesnd\_2}, \dots, \texttt{fesnd\_}$n$ by the position of the actor. An actor that never sends (never receives) has a coefficient that tends to minus infinity, and the note of Section~\ref{sec:collinear} appears.
+
+\section{Participation shifts}\label{sec:ps}
+
+Participation shifts describe how the next event follows the previous one. Let the previous event be $A\to B$ (sender $A$, receiver $B$). The six statistics are indicators: \opt{psabba} is $1$ for the reply $B\to A$; \opt{psabby} for $B$ sending to someone other than $A$; \opt{psabxa} for someone other than $A$ and $B$ sending to $A$; \opt{psabxb} for someone other than $A$ and $B$ sending to $B$; \opt{psabxy} for an event in which neither actor is $A$ or $B$; and \opt{psabay} for $A$ sending again, to someone other than $B$. They are zero at the first event. Together with the repetition of the previous event, $A\to B$ again, which is the reference category and has no shift of its own, the six sets of pairs partition the ordered pairs at every event. \relevent{} defines seven further shifts (those with undefined targets, for example \texttt{PSAB-B0}) whose coefficients are always zero; \nwrem{} does not offer them.

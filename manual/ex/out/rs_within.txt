@@ -1,0 +1,26 @@
+. quietly use `ev', clear
+
+. keep if divs == divr
+(354 observations deleted)
+
+. nwbuild within
+
+. quietly nwload within, xvars
+
+. quietly gen actor = _nwnode
+
+. quietly gen long row = _n
+
+. quietly merge m:1 actor using `staff', keep(master match) nogenerate
+
+. quietly sort row
+
+. list _nwnode division in 1/3
+
+     +--------------------+
+     | _nwnode   division |
+     |--------------------|
+  1. |    E102        E36 |
+  2. |    E103        E85 |
+  3. |    E105       E104 |
+     +--------------------+

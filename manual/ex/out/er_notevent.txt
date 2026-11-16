@@ -1,0 +1,9 @@
+. nwrandom 8, prob(.3) name(ordinary)
+
+. capture noisily nwrem ordinary, nodsnd
+nwrem requires a network declared via nwset's eventtime() option (an event-type
+temporal network) - see nwset.
+invalid syntax
+
+. display "return code: " _rc
+return code: 198

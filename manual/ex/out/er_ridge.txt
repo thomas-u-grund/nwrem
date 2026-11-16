@@ -1,0 +1,20 @@
+. nwrem mail, nodsnd nidsnd ntdegsnd
+------------------------------------------------------------
+Relational event model (ordinal partial likelihood, MLE)
+Network: mail                          Actors: 144
+Events: 631                            Log likelihood: -6.17e+03
+------------------------------------------------------------
+------------------------------------------------------------------------------
+        mail | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+      nodsnd |   15.40718   1.281093    12.03   0.000     12.89628    17.91807
+      nidsnd |   13.35825   1.294649    10.32   0.000     10.82079    15.89572
+    ntdegsnd |          0  (omitted)
+------------------------------------------------------------------------------
+Note: no usable standard error for ntdegsnd.
+      These effects are not identified: typically an effect is an exact function
+      of others in the model (the total-degree share ntdegsnd is half the sum of
+      nodsnd and nidsnd). Its estimate is arbitrary; drop one of the effects.
+
+. display "unidentified: " e(unidentified)
+unidentified: ntdegsnd

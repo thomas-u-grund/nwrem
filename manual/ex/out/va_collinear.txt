@@ -1,0 +1,268 @@
+. do cscripts/test_nwrem_collinear14.do
+
+. cscript
+-------------------------------------------------------------------------BEGIN 
+
+. 
+. * nwrem 1.4.0: effects that are exact functions of others are omitted (coeffi
+> cient 0, no standard error), for all effects (also the
+. * state-dependent ones frpsndsnd, frrecsnd, rsndsnd, rrecsnd, the triadic, fi
+> xed-effect and participation-shift effects).
+. * cscripts/ref14/collinear.csv: for 39 tiny networks (2 and 3 actors, so that
+>  many effects become exactly dependent) the set of
+. * omitted coefficients found from the statistics of the R package relevent (d
+> ev/rem_relevent14_gen.R, section I).
+. local nwcore : env NWCORE
+
+. if `"`nwcore'"' == "" {
+.         di as error "set the environment variable NWCORE to the directory of 
+> the nwcommands (core) package"
+.         exit 198
+. }
+
+. quietly do `"`nwcore'/unw_core.do"'
+
+. quietly do unw_rem.do
+
+. 
+. local ref "cscripts/ref14"
+
+. tempfile col cases
+
+. import delimited "`ref'/collinear.csv", clear varnames(1) stringcols(1 2)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 272 obs)
+
+. save `col'
+file /var/folders/hx/2zp2k5ps2y7d_6hx015fcr1h0000gn/T//S_70897.000001 saved
+    as .dta format
+
+. import delimited "`ref'/cases.csv", clear varnames(1) asdouble stringcols(1 4
+>  5 7)
+(encoding automatically selected: ISO-8859-1)
+(7 vars, 99 obs)
+
+. keep if note == "dependence"
+(60 observations deleted)
+
+. save `cases'
+file /var/folders/hx/2zp2k5ps2y7d_6hx015fcr1h0000gn/T//S_70897.000002 saved
+    as .dta format
+
+. local ncase = _N
+
+. forvalues k = 1/`ncase' {
+  2.         local c`k' = case[`k']
+  3.         local o`k' = opts[`k']
+  4. }
+
+. local nomit = 0
+
+. local nwrong = 0
+
+. forvalues k = 1/`ncase' {
+  2.         use `cases', clear
+  3.         nwclear
+  4.         import delimited "`ref'/`c`k''.events.csv", clear varnames(1) asdo
+> uble
+  5.         nwset sender receiver, eventtime(t) name(net)
+  6.         quietly nwrem net, `o`k''
+  7.         matrix B = e(b)
+  8.         matrix V = e(V)
+  9.         use `col', clear
+ 10.         keep if case == "`c`k''"
+ 11.         local bad = 0
+ 12.         local nd = 0
+ 13.         forvalues i = 1/`=_N' {
+ 14.                 local p = param[`i']
+ 15.                 local j = colnumb(B, "`p'")
+ 16.                 if `j' >= . {
+ 17.                         di as error "case `c`k'': parameter `p' not in e(b
+> )"
+ 18.                         local bad = 1
+ 19.                         continue
+ 20.                 }
+ 21.                 local omitted = (V[`j', `j'] == 0 & B[1, `j'] == 0)
+ 22.                 if `omitted' != dropped[`i'] {
+ 23.                         di as error "case `c`k'': `p' omitted by nwrem: `o
+> mitted', by the reference: `=dropped[`i']'"
+ 24.                         local bad = 1
+ 25.                 }
+ 26.                 local nd = `nd' + dropped[`i']
+ 27.         }
+ 28.         local nomit = `nomit' + `nd'
+ 29.         local nwrong = `nwrong' + `bad'
+ 30.         di as text %-8s "`c`k''" " parameters " as result %3.0f `=_N' as t
+> ext "  omitted " as result %3.0f `nd' as text "   " as result cond(`bad', "DI
+> FFERENT", "same")
+ 31. }
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 11 obs)
+(264 observations deleted)
+col1     parameters   8  omitted   6   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 44 obs)
+(264 observations deleted)
+col2     parameters   8  omitted   6   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 35 obs)
+(264 observations deleted)
+col3     parameters   8  omitted   6   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 16 obs)
+(264 observations deleted)
+col4     parameters   8  omitted   6   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 32 obs)
+(264 observations deleted)
+col5     parameters   8  omitted   5   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 10 obs)
+(264 observations deleted)
+col6     parameters   8  omitted   5   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 25 obs)
+(264 observations deleted)
+col7     parameters   8  omitted   6   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 43 obs)
+(264 observations deleted)
+col8     parameters   8  omitted   7   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 45 obs)
+(268 observations deleted)
+col10    parameters   4  omitted   3   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 26 obs)
+(266 observations deleted)
+col11    parameters   6  omitted   4   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 16 obs)
+(266 observations deleted)
+col12    parameters   6  omitted   5   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 44 obs)
+(267 observations deleted)
+col13    parameters   5  omitted   4   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 33 obs)
+(269 observations deleted)
+col14    parameters   3  omitted   2   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 32 obs)
+(262 observations deleted)
+col15    parameters  10  omitted   0   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 14 obs)
+(263 observations deleted)
+col16    parameters   9  omitted   0   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 21 obs)
+(265 observations deleted)
+col17    parameters   7  omitted   0   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 43 obs)
+(266 observations deleted)
+col18    parameters   6  omitted   0   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 11 obs)
+(262 observations deleted)
+col19    parameters  10  omitted   0   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 38 obs)
+(268 observations deleted)
+col20    parameters   4  omitted   0   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 31 obs)
+(266 observations deleted)
+col21    parameters   6  omitted   0   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 35 obs)
+(267 observations deleted)
+col22    parameters   5  omitted   1   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 8 obs)
+cannot compute an improvement -- flat region encountered
+(262 observations deleted)
+col23    parameters  10  omitted   1   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 9 obs)
+cannot compute an improvement -- flat region encountered
+(262 observations deleted)
+col24    parameters  10  omitted   0   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 17 obs)
+(267 observations deleted)
+col25    parameters   5  omitted   1   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 45 obs)
+(269 observations deleted)
+col26    parameters   3  omitted   0   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 16 obs)
+(263 observations deleted)
+col27    parameters   9  omitted   2   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 38 obs)
+(267 observations deleted)
+col28    parameters   5  omitted   0   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 31 obs)
+(267 observations deleted)
+col29    parameters   5  omitted   1   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 31 obs)
+(268 observations deleted)
+col30    parameters   4  omitted   0   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 25 obs)
+(262 observations deleted)
+col31    parameters  10  omitted   0   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 8 obs)
+(266 observations deleted)
+col32    parameters   6  omitted   0   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 11 obs)
+(261 observations deleted)
+col33    parameters  11  omitted   0   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 45 obs)
+(262 observations deleted)
+col34    parameters  10  omitted   1   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 15 obs)
+(267 observations deleted)
+col35    parameters   5  omitted   0   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 15 obs)
+(268 observations deleted)
+col36    parameters   4  omitted   1   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 19 obs)
+(264 observations deleted)
+col37    parameters   8  omitted   1   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 13 obs)
+(262 observations deleted)
+col38    parameters  10  omitted   2   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 15 obs)
+(265 observations deleted)
+col39    parameters   7  omitted   0   same
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 34 obs)
+(267 observations deleted)
+col40    parameters   5  omitted   0   same
+
+. assert `nwrong' == 0
+
+. assert `nomit' > 20
+
+. di as text "  PASS: the omitted coefficients agree with the reference in all 
+> `ncase' cases (`nomit' omitted coefficients in all)"
+  PASS: the omitted coefficients agree with the reference in all 39 cases (76 o
+> mitted coefficients in all)
+
+. di "test_nwrem_collinear14: ALL OK"
+test_nwrem_collinear14: ALL OK

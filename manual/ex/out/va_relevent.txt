@@ -1,0 +1,602 @@
+. do cscripts/test_nwrem_relevent14.do
+
+. cscript
+-------------------------------------------------------------------------BEGIN 
+
+. 
+. * nwrem 1.4.0 against the R package relevent (1.2-1) on fixed reference value
+> s: the waiting-time (interval) likelihood, conditioned
+. * events, the triadic and shared-partner effects, fixed effects, participatio
+> n shifts, several covariates per effect, several
+. * covariate networks, posterior-mode estimation (relevent's "BPM"), risk sets
+>  (dyad mask, entry and exit windows).
+. * cscripts/ref14/ holds the event logs, covariates and networks and the refer
+> ence values; dev/rem_relevent14_gen.R made them.
+. * Two reference routes (see the generator): "trust" = relevent's own statisti
+> cs fitted by rem() (analytic gradient and Hessian: the
+. * exact maximum; nwrem must agree to 1e-6 in the coefficients and the standar
+> d errors, 1e-9 in the log likelihood) and "dyad" =
+. * rem.dyad() itself (BFGS with a numerical Hessian, stops at the fifth to six
+> th digit of the coefficients: 1e-4 here).
+. local nwcore : env NWCORE
+
+. if `"`nwcore'"' == "" {
+.         di as error "set the environment variable NWCORE to the directory of 
+> the nwcommands (core) package"
+.         exit 198
+. }
+
+. quietly do `"`nwcore'/unw_core.do"'
+
+. quietly do unw_rem.do
+
+. 
+. local ref "cscripts/ref14"
+
+. tempfile res cases
+
+. import delimited "`ref'/results.csv", clear varnames(1) asdouble stringcols(1
+>  2 3)
+(encoding automatically selected: ISO-8859-1)
+(6 vars, 392 obs)
+
+. save `res'
+file /var/folders/hx/2zp2k5ps2y7d_6hx015fcr1h0000gn/T//S_70897.000001 saved
+    as .dta format
+
+. import delimited "`ref'/cases.csv", clear varnames(1) asdouble stringcols(1 4
+>  5 7)
+(encoding automatically selected: ISO-8859-1)
+(7 vars, 99 obs)
+
+. save `cases'
+file /var/folders/hx/2zp2k5ps2y7d_6hx015fcr1h0000gn/T//S_70897.000002 saved
+    as .dta format
+
+. 
+. capture program drop chk14
+
+. program chk14
+  1.         args case ref res cases
+  2.         use `cases', clear
+  3.         keep if case == "`case'"
+  4.         local opts = opts[1]
+  5.         local nets = nets[1]
+  6.         local hasact = actors[1]
+  7.         nwclear
+  8.         foreach nm of local nets {
+  9.                 import delimited "`ref'/`case'.`nm'.csv", clear varnames(1
+> ) asdouble
+ 10.                 nwset i j value, name(`nm') edgelist directed
+ 11.         }
+ 12.         import delimited "`ref'/`case'.events.csv", clear varnames(1) asdo
+> uble
+ 13.         nwset sender receiver, eventtime(t) name(net)
+ 14.         if "`hasact'" == "true" | "`hasact'" == "TRUE" {
+ 15.                 nwload net, xvars
+ 16.                 gen long aid = real(substr(_nwnode, 2, .))
+ 17.                 preserve
+ 18.                 import delimited "`ref'/`case'.actors.csv", clear varnames
+> (1) asdouble
+ 19.                 tempfile act
+ 20.                 save `act'
+ 21.                 restore
+ 22.                 merge 1:1 aid using `act', keep(master match) nogen
+ 23.         }
+ 24.         quietly nwrem net, `opts'
+ 25.         matrix B = e(b)
+ 26.         matrix V = e(V)
+ 27.         local ll = e(ll)
+ 28.         use `res', clear
+ 29.         keep if case == "`case'"
+ 30.         local maxb = 0
+ 31.         local maxs = 0
+ 32.         local maxl = 0
+ 33.         local maxbd = 0
+ 34.         local maxsd = 0
+ 35.         forvalues i = 1/`=_N' {
+ 36.                 local p = param[`i']
+ 37.                 local j = colnumb(B, "`p'")
+ 38.                 if `j' >= . {
+ 39.                         di as error "case `case': parameter `p' of releven
+> t is not in e(b) of nwrem"
+ 40.                         exit 9
+ 41.                 }
+ 42.                 local db = abs(B[1, `j'] - coef[`i']) / (1 + abs(coef[`i']
+> ))
+ 43.                 local ds = abs(sqrt(V[`j', `j']) - se[`i']) / (1 + abs(se[
+> `i']))
+ 44.                 local dl = abs(`ll' - ll[`i']) / (1 + abs(ll[`i']))
+ 45.                 if route[`i'] == "trust" {
+ 46.                         local maxb = max(`maxb', `db')
+ 47.                         local maxs = max(`maxs', `ds')
+ 48.                         local maxl = max(`maxl', `dl')
+ 49.                 }
+ 50.                 else {
+ 51.                         local maxbd = max(`maxbd', `db')
+ 52.                         local maxsd = max(`maxsd', `ds')
+ 53.                 }
+ 54.         }
+ 55.         di as text %-12s "`case'" " exact: coef " as result %9.2e `maxb' a
+> s text "  se " as result %9.2e `maxs' as text "  ll " as result %9.2e `maxl' 
+> ///
+>                 as text "   rem.dyad: coef " as result %9.2e `maxbd' as text 
+> "  se " as result %9.2e `maxsd'
+ 56.         if `maxb' > 1e-5 | `maxs' > 1e-5 | `maxl' > 1e-9 {
+ 57.                 di as error "case `case': nwrem and relevent (exact route)
+>  differ"
+ 58.                 global nfail14 = $nfail14 + 1
+ 59.         }
+ 60.         if `maxbd' > 2e-4 | `maxsd' > 2e-4 {
+ 61.                 di as error "case `case': nwrem and rem.dyad differ"
+ 62.                 global nfail14 = $nfail14 + 1
+ 63.         }
+ 64. end
+
+. 
+. global nfail14 = 0
+
+. use `cases', clear
+
+. drop if note == "dependence"
+(39 observations deleted)
+
+. local ncase = _N
+
+. forvalues k = 1/`ncase' {
+  2.         local c`k' = case[`k']
+  3. }
+
+. forvalues k = 1/`ncase' {
+  2.         chk14 `c`k'' `ref' `res' `cases'
+  3. }
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 250 obs)
+(376 observations deleted)
+a1           exact: coef  2.22e-09  se  1.14e-10  ll  1.16e-15   rem.dyad: coef
+>   3.40e-08  se  2.92e-07
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 250 obs)
+(376 observations deleted)
+a2           exact: coef  2.35e-06  se  1.06e-07  ll  3.37e-14   rem.dyad: coef
+>   2.32e-06  se  1.88e-07
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 250 obs)
+(376 observations deleted)
+a3           exact: coef  1.04e-07  se  7.21e-09  ll  3.96e-16   rem.dyad: coef
+>   5.57e-08  se  6.36e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 200 obs)
+(388 observations deleted)
+b1           exact: coef  4.17e-08  se  9.91e-09  ll  8.41e-16   rem.dyad: coef
+>   1.12e-07  se  2.00e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 250 obs)
+(388 observations deleted)
+b2           exact: coef  1.80e-08  se  4.25e-09  ll  3.04e-15   rem.dyad: coef
+>   1.86e-08  se  7.01e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 300 obs)
+(388 observations deleted)
+b3           exact: coef  4.72e-08  se  9.51e-09  ll  2.64e-15   rem.dyad: coef
+>   1.02e-07  se  2.08e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 250 obs)
+(380 observations deleted)
+b4           exact: coef  6.80e-11  se  1.79e-11  ll  1.52e-15   rem.dyad: coef
+>   1.37e-07  se  7.86e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 250 obs)
+(380 observations deleted)
+b5           exact: coef  3.47e-09  se  1.22e-09  ll  1.79e-15   rem.dyad: coef
+>   1.18e-07  se  8.32e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 300 obs)
+(386 observations deleted)
+b6           exact: coef  3.09e-13  se  3.59e-14  ll  5.14e-15   rem.dyad: coef
+>   6.08e-08  se  3.61e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 250 obs)
+(encoding automatically selected: ISO-8859-1)
+(4 vars, 7 obs)
+file /var/folders/hx/2zp2k5ps2y7d_6hx015fcr1h0000gn/T//S_70897.000004 saved
+    as .dta format
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                                 7  
+    -----------------------------------------
+(386 observations deleted)
+b7           exact: coef  2.03e-07  se  7.30e-08  ll  3.54e-14   rem.dyad: coef
+>   2.93e-07  se  3.61e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 200 obs)
+(388 observations deleted)
+b8           exact: coef  9.94e-09  se  2.67e-09  ll  8.69e-16   rem.dyad: coef
+>   9.79e-09  se  4.88e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 200 obs)
+(386 observations deleted)
+b9           exact: coef  5.66e-10  se  2.89e-11  ll  1.06e-15   rem.dyad: coef
+>   6.84e-08  se  8.51e-09
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 250 obs)
+(386 observations deleted)
+b10          exact: coef  8.25e-08  se  2.47e-08  ll  1.15e-15   rem.dyad: coef
+>   5.41e-08  se  6.60e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 250 obs)
+(386 observations deleted)
+b11          exact: coef  1.76e-07  se  5.62e-08  ll  1.04e-14   rem.dyad: coef
+>   1.41e-07  se  1.77e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 200 obs)
+(388 observations deleted)
+c_otp1       exact: coef  1.38e-09  se  1.95e-11  ll  1.08e-15   rem.dyad: coef
+>   2.29e-07  se  5.84e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 200 obs)
+(388 observations deleted)
+c_otp2       exact: coef  4.72e-08  se  5.21e-09  ll  9.40e-16   rem.dyad: coef
+>   1.84e-07  se  5.18e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 200 obs)
+(388 observations deleted)
+c_otp3       exact: coef  5.25e-09  se  7.13e-11  ll  4.58e-16   rem.dyad: coef
+>   9.32e-07  se  5.21e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 200 obs)
+(388 observations deleted)
+c_itp1       exact: coef  6.90e-08  se  6.38e-09  ll  6.19e-16   rem.dyad: coef
+>   7.79e-08  se  6.36e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 200 obs)
+(388 observations deleted)
+c_itp2       exact: coef  1.95e-07  se  2.47e-08  ll  2.28e-14   rem.dyad: coef
+>   6.93e-07  se  2.68e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 200 obs)
+(388 observations deleted)
+c_itp3       exact: coef  1.48e-07  se  6.68e-09  ll  4.59e-16   rem.dyad: coef
+>   1.44e-06  se  8.85e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 200 obs)
+(388 observations deleted)
+c_isp1       exact: coef  4.11e-08  se  4.69e-10  ll  1.09e-15   rem.dyad: coef
+>   1.12e-06  se  3.66e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 200 obs)
+(388 observations deleted)
+c_isp2       exact: coef  1.02e-11  se  1.96e-12  ll  1.29e-15   rem.dyad: coef
+>   2.21e-06  se  2.06e-07
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 200 obs)
+(388 observations deleted)
+c_isp3       exact: coef  2.59e-09  se  1.74e-11  ll  6.10e-16   rem.dyad: coef
+>   8.62e-08  se  3.19e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 200 obs)
+(390 observations deleted)
+c_osp1       exact: coef  7.41e-08  se  1.89e-08  ll  9.72e-15   rem.dyad: coef
+>   0.00e+00  se  0.00e+00
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 200 obs)
+(390 observations deleted)
+c_osp2       exact: coef  4.94e-09  se  3.60e-11  ll  0.00e+00   rem.dyad: coef
+>   0.00e+00  se  0.00e+00
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 200 obs)
+(390 observations deleted)
+c_osp3       exact: coef  9.06e-13  se  1.40e-13  ll  7.92e-16   rem.dyad: coef
+>   0.00e+00  se  0.00e+00
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 300 obs)
+(382 observations deleted)
+c_all1       exact: coef  1.23e-10  se  8.50e-12  ll  9.75e-16   rem.dyad: coef
+>   2.14e-05  se  1.34e-06
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 300 obs)
+(386 observations deleted)
+c_all2       exact: coef  3.69e-09  se  8.07e-10  ll  2.85e-15   rem.dyad: coef
+>   0.00e+00  se  0.00e+00
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 250 obs)
+(386 observations deleted)
+c_int1       exact: coef  2.00e-11  se  1.14e-12  ll  0.00e+00   rem.dyad: coef
+>   1.92e-05  se  8.76e-06
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 250 obs)
+(384 observations deleted)
+c_rec1       exact: coef  2.73e-08  se  6.39e-10  ll  1.29e-15   rem.dyad: coef
+>   2.22e-06  se  2.62e-07
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 250 obs)
+(382 observations deleted)
+d_fesnd      exact: coef  1.25e-10  se  9.69e-12  ll  5.45e-16   rem.dyad: coef
+>   2.96e-07  se  5.02e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 250 obs)
+(382 observations deleted)
+d_ferec      exact: coef  2.41e-08  se  2.12e-09  ll  4.41e-15   rem.dyad: coef
+>   2.71e-07  se  5.06e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 250 obs)
+(382 observations deleted)
+d_feint      exact: coef  5.57e-09  se  8.52e-11  ll  5.93e-15   rem.dyad: coef
+>   3.05e-07  se  6.65e-09
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 300 obs)
+(370 observations deleted)
+d_fesr       exact: coef  5.19e-09  se  1.09e-09  ll  1.21e-15   rem.dyad: coef
+>   2.10e-06  se  4.51e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 300 obs)
+(382 observations deleted)
+d_feint2     exact: coef  5.69e-10  se  1.45e-11  ll  8.02e-16   rem.dyad: coef
+>   5.23e-07  se  1.58e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 250 obs)
+(370 observations deleted)
+d_feiv       exact: coef  3.72e-10  se  2.26e-10  ll  2.22e-15   rem.dyad: coef
+>   1.75e-07  se  3.61e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 250 obs)
+(388 observations deleted)
+e_psabba     exact: coef  1.09e-10  se  1.48e-11  ll  2.65e-16   rem.dyad: coef
+>   2.96e-08  se  2.53e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 250 obs)
+(388 observations deleted)
+e_psabby     exact: coef  9.64e-07  se  6.56e-08  ll  4.01e-14   rem.dyad: coef
+>   9.69e-07  se  6.35e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 250 obs)
+(388 observations deleted)
+e_psabxa     exact: coef  5.85e-11  se  8.20e-12  ll  1.54e-15   rem.dyad: coef
+>   9.17e-08  se  1.27e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 250 obs)
+(388 observations deleted)
+e_psabxb     exact: coef  1.77e-08  se  2.57e-09  ll  1.36e-16   rem.dyad: coef
+>   1.33e-07  se  6.49e-09
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 250 obs)
+(388 observations deleted)
+e_psabxy     exact: coef  7.11e-10  se  1.39e-11  ll  4.91e-16   rem.dyad: coef
+>   7.89e-07  se  6.21e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 250 obs)
+(388 observations deleted)
+e_psabay     exact: coef  6.24e-07  se  8.03e-08  ll  1.15e-14   rem.dyad: coef
+>   7.43e-07  se  7.64e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 400 obs)
+(380 observations deleted)
+e_all        exact: coef  1.51e-10  se  1.34e-11  ll  4.38e-15   rem.dyad: coef
+>   3.29e-06  se  3.81e-07
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 300 obs)
+(382 observations deleted)
+e_mix        exact: coef  3.42e-07  se  4.35e-08  ll  1.77e-14   rem.dyad: coef
+>   5.97e-07  se  3.19e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 300 obs)
+(386 observations deleted)
+e_int        exact: coef  8.24e-12  se  1.75e-12  ll  7.64e-15   rem.dyad: coef
+>   6.95e-08  se  1.80e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 250 obs)
+(encoding automatically selected: ISO-8859-1)
+(4 vars, 7 obs)
+file /var/folders/hx/2zp2k5ps2y7d_6hx015fcr1h0000gn/T//S_70897.000004 saved
+    as .dta format
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                                 7  
+    -----------------------------------------
+(384 observations deleted)
+f_cov1       exact: coef  5.49e-09  se  1.11e-09  ll  2.58e-16   rem.dyad: coef
+>   2.73e-07  se  4.18e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 250 obs)
+(encoding automatically selected: ISO-8859-1)
+(4 vars, 7 obs)
+file /var/folders/hx/2zp2k5ps2y7d_6hx015fcr1h0000gn/T//S_70897.000004 saved
+    as .dta format
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                                 7  
+    -----------------------------------------
+(386 observations deleted)
+f_cov2       exact: coef  2.07e-15  se  6.75e-15  ll  8.31e-16   rem.dyad: coef
+>   4.94e-07  se  2.79e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 42 obs)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 42 obs)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 250 obs)
+(386 observations deleted)
+f_cev        exact: coef  1.78e-10  se  5.91e-12  ll  1.33e-16   rem.dyad: coef
+>   1.81e-08  se  6.35e-09
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 200 obs)
+(386 observations deleted)
+g1           exact: coef  5.66e-07  se  1.71e-08  ll  1.21e-13   rem.dyad: coef
+>   6.22e-07  se  5.74e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 200 obs)
+(386 observations deleted)
+g2           exact: coef  2.94e-08  se  3.17e-09  ll  2.50e-14   rem.dyad: coef
+>   1.38e-07  se  1.27e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 200 obs)
+(386 observations deleted)
+g3           exact: coef  5.16e-13  se  5.82e-14  ll  3.61e-15   rem.dyad: coef
+>   1.31e-07  se  2.13e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 200 obs)
+(386 observations deleted)
+g4           exact: coef  7.38e-09  se  1.13e-09  ll  2.38e-11   rem.dyad: coef
+>   8.18e-07  se  7.06e-08
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 42 obs)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 250 obs)
+(389 observations deleted)
+h_mask1      exact: coef  1.00e-06  se  4.08e-08  ll  2.02e-14   rem.dyad: coef
+>   0.00e+00  se  0.00e+00
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 42 obs)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 250 obs)
+(389 observations deleted)
+h_mask2      exact: coef  5.53e-07  se  3.32e-08  ll  3.88e-15   rem.dyad: coef
+>   0.00e+00  se  0.00e+00
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 42 obs)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 250 obs)
+(389 observations deleted)
+h_mask3      exact: coef  2.36e-09  se  2.01e-10  ll  9.21e-16   rem.dyad: coef
+>   0.00e+00  se  0.00e+00
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 42 obs)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 250 obs)
+(390 observations deleted)
+h_maskint    exact: coef  3.70e-08  se  7.67e-09  ll  0.00e+00   rem.dyad: coef
+>   0.00e+00  se  0.00e+00
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 300 obs)
+(encoding automatically selected: ISO-8859-1)
+(6 vars, 8 obs)
+file /var/folders/hx/2zp2k5ps2y7d_6hx015fcr1h0000gn/T//S_70897.000004 saved
+    as .dta format
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                                 8  
+    -----------------------------------------
+(389 observations deleted)
+h_win1       exact: coef  6.13e-12  se  1.71e-13  ll  6.42e-16   rem.dyad: coef
+>   0.00e+00  se  0.00e+00
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 300 obs)
+(encoding automatically selected: ISO-8859-1)
+(6 vars, 8 obs)
+file /var/folders/hx/2zp2k5ps2y7d_6hx015fcr1h0000gn/T//S_70897.000004 saved
+    as .dta format
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                                 8  
+    -----------------------------------------
+(390 observations deleted)
+h_winint     exact: coef  7.13e-11  se  1.27e-11  ll  1.43e-15   rem.dyad: coef
+>   0.00e+00  se  0.00e+00
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 300 obs)
+(encoding automatically selected: ISO-8859-1)
+(6 vars, 8 obs)
+file /var/folders/hx/2zp2k5ps2y7d_6hx015fcr1h0000gn/T//S_70897.000004 saved
+    as .dta format
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                                 8  
+    -----------------------------------------
+(389 observations deleted)
+h_win2       exact: coef  1.65e-07  se  8.47e-09  ll  1.92e-15   rem.dyad: coef
+>   0.00e+00  se  0.00e+00
+(98 observations deleted)
+(encoding automatically selected: ISO-8859-1)
+(3 vars, 300 obs)
+(encoding automatically selected: ISO-8859-1)
+(6 vars, 8 obs)
+file /var/folders/hx/2zp2k5ps2y7d_6hx015fcr1h0000gn/T//S_70897.000004 saved
+    as .dta format
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                                 8  
+    -----------------------------------------
+(389 observations deleted)
+h_win3       exact: coef  4.33e-12  se  3.35e-13  ll  0.00e+00   rem.dyad: coef
+>   0.00e+00  se  0.00e+00
+
+. assert $nfail14 == 0
+
+. di as text "  PASS: nwrem agrees with relevent in all `ncase' cases"
+  PASS: nwrem agrees with relevent in all 60 cases
+
+. di "test_nwrem_relevent14: ALL OK"
+test_nwrem_relevent14: ALL OK

@@ -1,0 +1,46 @@
+\chapter{Getting started}\label{ch:start}
+
+This chapter takes you from an event list to a first fitted model, shows how to read the output and explains how the coefficients are named. All commands were run with \nwrem{}~\pkgversion{}.
+
+\section{Declaring the events}\label{sec:declare}
+
+\nwrem{} does not read the events from variables. It takes the \emph{name} of a network that exists in the current \texttt{nwcommands} session and that was declared as an \emph{event network} with the option \opt{eventtime()} of \texttt{nwset}:
+\begin{lstlisting}
+. nwset sender receiver, directed eventtime(t) name(mail)
+\end{lstlisting}
+Each row of the data is one event: the variables \texttt{sender} and \texttt{receiver} identify the actors (numbers or strings) and \texttt{t} is the time. The rules for the event data are these.
+\begin{itemize}[nosep]
+  \item Every event needs a time, a sender and a receiver that are actors of the network. Events without a time or with a missing actor are refused when the network is declared, and by \nwrem{} (return code 416) if they get there in another way.
+  \item A sender must differ from the receiver. A self-loop is refused with return code 3498; drop such rows before \texttt{nwset}.
+  \item Two-mode event networks are refused (return code 198).
+  \item An event can carry a value (a third variable in \texttt{nwset}). \nwrem{} reads sender, receiver and time only and ignores the value.
+  \item Events with the same time keep the order of the rows (Section~\ref{sec:ordinal}); they are allowed with the ordinal likelihood and refused with \opt{interval}.
+  \item The times need not be sorted; \nwrem{} sorts the events.
+\end{itemize}
+
+\paragraph{Direction.} Every event is read as directed from the first variable (the sender) to the second (the receiver), and the risk set at each event holds the $n(n-1)$ ordered pairs, whatever the declaration says; this follows \texttt{rem.dyad()} of \relevent{}, which has no undirected variant. A network declared with \texttt{nwset}'s option \texttt{undirected} is fitted in the same way and gives the same results as the directed declaration; the option changes only the network summary that \texttt{nwset} builds from the events. Because the sender and receiver effects depend on the order of the two variables, put the actor who starts the event first. This manual declares event networks with the option \texttt{directed}.
+
+\paragraph{Actors that do not occur in the events.} The actors of the network are the actors that occur in the list. An employee who sends and receives nothing in the period is nevertheless a possible sender and receiver at every moment, and belongs to the set of pairs that the model compares. Add the missing actors as isolates with \texttt{nwaddnodes}, as in the example below; this changes $n$, and with it every normalizer of the likelihood.
+
+\paragraph{Attributes of the actors.} The per-actor variables for \opt{covsnd()}, \opt{covrec()}, \opt{covint()}, \opt{entry()} and \opt{exit()} are read from the \emph{current dataset}, not from the event data. \texttt{nwload} \emph{netname}\texttt{, xvars} loads a dataset with one row per actor and the label of the actor in the variable \texttt{\_nwnode}. When the dataset has this variable, each actor of the network is matched to its row by label, whatever the sort order of the data (an actor without a row, or with more than one, is refused with return code 198); without \texttt{\_nwnode} the dataset must have exactly one row per actor, in the actor order of the network. A missing value of a covariate is refused (return code 416). Merge further variables into this dataset (Section~\ref{sec:ex-cov}) and name them in the options.
+
+\paragraph{Pair covariates and risk sets are networks.} A covariate of the pair (\opt{covevent()}) and the pairs of a restricted risk set (\opt{riskset()}) are other networks in memory with the same actors as the event network; Section~\ref{sec:covevent} gives the rules.
+
+\section{The data of the examples}\label{sec:data}
+
+The examples use the e-mail metadata of a manufacturing company: 50,233 e-mails among 144 employees between January and September 2010, each with the sender, the receiver and the time in days since 1 January 2010; there is no content. The source is Michalski~\cite{michalski2020}, released under CC0~1.0; see also Nurek and Michalski~\cite{nurek2020}. The files distributed with the core package are a derived subset prepared by the author of this package: only e-mails with exactly one recipient and only the 154 employees with a known supervisor were kept, e-mails to oneself were removed, the employee identifiers are prefixed with \texttt{E}, and the time is in days. They are read by \texttt{nwwebuse manufacturing} (the events) and \texttt{nwwebuse manufacturing\_nodes} (the reporting hierarchy: the direct supervisor, the number of steps to the chief executive, and the division). The data are not covered by the GPL-3 of the code. To keep the fits quick, most examples use the first five days of the log (\texttt{t < 5}): 631 e-mails, which name 102 of the 144 employees; the other 42 are added as isolates.
+\showlog{ml_data}
+
+\section{A first model}\label{sec:firstmodel}
+
+The simplest model has two effects. \opt{nodsnd} is the normalized out-degree of the sender, the share of all earlier events in which this actor was the sender. \opt{nidrec} is the normalized in-degree of the receiver, the share of the earlier events in which this actor was the receiver. Chapter~\ref{ch:effects} defines every effect.
+\showlog{ml_m1}
+The header names the likelihood and the estimator, the network, the number of actors and of events and the log likelihood; the log likelihood is printed in a rounded form in the header, and \texttt{e(ll)} holds the exact value. The table lists each coefficient with its standard error, $z$ statistic, $p$-value and confidence interval.
+
+\paragraph{How to read the coefficients.} A coefficient is the log rate ratio of equation~(\ref{eq:rate}). The degree effects are shares between 0 and 1, so their coefficients are large: a sender whose share of the earlier e-mails is 0.1 higher has $\exp(1.556)\approx 4.7$ times the rate of sending the next e-mail, and a receiver whose share of earlier receipts is 0.1 higher is $\exp(2.503)\approx 12$ times as likely to be the one written to. People who have been busy stay busy, and people who have received a lot keep receiving.
+
+\section{Coefficient names and order}
+
+The coefficients are named after the effect: \texttt{nodsnd}, \texttt{frpsndsnd}. The covariate effects add the name of the variable or of the network (\texttt{covsnd\_level}, \texttt{covevent\_samesup}); a name longer than 32 characters is cut to 32. The fixed effects add the number of the actor, counted in the actor order of the network from the second actor on (\texttt{fesnd\_2}, \texttt{fesnd\_3}, \dots), because the first actor is the reference. The order of the coefficients is the fixed order of Table~\ref{tab:effects} in Chapter~\ref{ch:effects}, not the order in which you typed the options. Several variables in one option give one coefficient each, in the order of the variables.
+
+\paragraph{Replaying and storing.} \texttt{nwrem} typed without arguments, or with \opt{level()} only, redisplays the results of the last fit; \texttt{estimates replay} works as well. Results can be stored with \texttt{estimates store} and compared (Chapter~\ref{ch:results}).

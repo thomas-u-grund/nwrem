@@ -1,0 +1,40 @@
+\chapter{Validation against \texorpdfstring{\relevent}{relevent}}\label{ch:validation}
+
+\nwrem{} is checked against the R package \relevent{}, version~\releventver{}, in three ways: its estimates are compared with those of \relevent{} on simulated event logs; its likelihood, gradient and Hessian are compared with independent evaluators; and its handling of effects that cannot be estimated is compared with the behavior of the statistics of \relevent{}. This chapter states what was compared and with which tolerances. The test suite of the package (the folder \texttt{cscripts} of the repository) reruns all of these comparisons, with the reference values stored in the repository; the scripts that made the reference values in R are in the folder \texttt{dev}.
+
+\section{Estimates against \texorpdfstring{\relevent}{relevent}}\label{sec:val-relevent}
+
+\paragraph{Design.} There are \nvalcases{} cases: event logs simulated with 6 to 8 actors and 150 to 300 events (with repeated pairs, replies and, where the model needs them, actor covariates, covariate networks, risk sets, entry and exit times), each with a model that uses the options of this version: all original effects, the triadic effects, the fixed effects, the participation shifts, several covariates per option, the waiting-time likelihood (with and without conditioning and with an \opt{endtime()} after the last event), the posterior mode with several priors, and restricted risk sets. For each case \relevent{} was run in R and the coefficients, standard errors and log likelihood stored. Two reference routes were used.
+\begin{description}[nosep]
+  \item[Exact route.] The statistics of the effects were taken from \relevent{}'s own routines and fitted with \texttt{rem()} of \relevent{}, which has an analytic gradient and Hessian and a trust-region optimizer. This gives the exact maximum of the likelihood of \relevent{}. \nwrem{} must agree with it to $10^{-5}$ in the coefficients and in the standard errors and to $10^{-9}$ in the log likelihood (differences measured as $|x-x_0|/(1+|x_0|)$).
+  \item[\texttt{rem.dyad()}.] The function \texttt{rem.dyad()} of \relevent{} itself, where the model is one that it can fit (\nvaldyad{} of the \nvalcases{} cases). It uses BFGS with a numerical Hessian and stops at the fifth to sixth digit of the coefficients; the tolerance is $2\cdot10^{-4}$.
+\end{description}
+\texttt{rem.dyad()} cannot fit a restricted risk set or an entry and exit window, and it computes the asymmetric statistic of \opt{ospsnd}. For the 8 cases with a risk set or windows and the 4 cases with \opt{ospsnd}, only the exact route exists: the likelihood is that of \texttt{rem()} of \relevent{} with a support matrix (for the risk sets) or with its own statistics (all others); the statistics of the restricted risk sets and of the symmetric \opt{ospsnd} were built in R by a short function that implements the definition of Chapter~\ref{ch:effects} and are not those of \relevent{}. That check shows that \nwrem{} computes the symmetric statistic, the risk sets and the windows as defined, and that the likelihood built on them is that of \relevent{}; it is not a check of those statistics against code of \relevent{}.
+
+\paragraph{Result.} The test passes in all cases. The largest deviations per group are:
+\begin{table}[h]
+\centering\footnotesize
+\caption{Largest deviation from \relevent{}, by group of cases (Stata~17, \nwrem{}~\pkgversion{}).}
+\input{gen_valid.tex}
+\end{table}
+The deviations from the exact maximum are of the size of the round-off of the optimization (below $3\cdot10^{-6}$ in every case; most are far smaller), and the log likelihoods agree to about $3\cdot10^{-11}$ or better. The deviations from \texttt{rem.dyad()} are those of the BFGS iteration of \relevent{} (about $10^{-5}$ at most here). The package therefore returns the exact maximum of the likelihood, to at least five digits; \relevent{} with its default control settings stops earlier. The first lines of the test output and its summary:
+\showlog{va_summary}
+Timing runs on larger simulations (Chapter~\ref{ch:technical}) agree with \texttt{rem.dyad()} to about three significant digits (the largest relative difference of a coefficient was $4.2\cdot10^{-3}$, in a cell where the optimizer of \relevent{} stops early).
+
+\paragraph{Earlier checks of the original effects.} The original effects (degree, inertia, recency, covariates of the actors and of the pair) were checked in separate runs with \texttt{rem.dyad()} on fixed event logs of 8 to 10 actors and 400 to 500 events, one effect family at a time and with the degree and inertia effects together; the scripts and the exported data are in the folder \texttt{dev}. The degree-accumulator semantics were checked against the output of the function \texttt{acl.deg()} of \relevent{}.
+
+\section{The shared out-partner statistic}\label{sec:val-osp}
+
+\opt{ospsnd} is the one statistic that is deliberately not that of \relevent{}~\releventver{} (Section~\ref{sec:triadic}). The symmetric statistic was checked as described above: \nvalcases{} cases include four with \opt{ospsnd} (alone with \opt{nodsnd}, and together with the other triadic effects), and \nwrem{} agrees with the exact route of \relevent{}'s likelihood fed with the symmetric statistic (largest deviation in the coefficients $7.4\cdot10^{-8}$). If you need the estimate of \relevent{} for \texttt{OSPSnd}, \nwrem{} cannot reproduce it.
+
+\section{The likelihood, gradient and Hessian of the plugin}\label{sec:val-plugin}
+
+The plugin is compared with independent evaluators written in Mata (the reference evaluators of the test suite, which agree with \relevent{}) on random small event sequences with ties between event times, repeated pairs and valued covariate networks (negative, zero and large values, with missing or non-zero diagonals). The comparisons cover every effect alone, every pair of effects, random subsets and the full set; every one of the $2^{14}$ subsets of the 14 original effects on a small system; the fast and the dense evaluator of the plugin against each other; extreme coefficients, for which the fast evaluator gives up and the dense one takes over; and the exact Hessian against the numerical derivative of the gradient. The log likelihood and the gradient agree to $10^{-9}$ (relative) and the Hessian with the numerical derivative to $10^{-5}$.
+
+\section{Effects that are not estimable}\label{sec:val-collinear}
+
+For 39 very small networks (2 and 3 actors, in which many effects become exactly dependent) the set of coefficients that \nwrem{} leaves out was compared with the set found from the statistics of \relevent{}: in all 39 cases the sets are identical (76 omitted coefficients in all).
+
+\section{Other checks}
+
+The test suite also contains: tests of every error path with its return code and of the stored results and identities between them (the log likelihood of the null model, the information criteria); a test that a network declared directed and the same network declared undirected give the same estimates; tests of the stops that follow from a missing or outdated plugin; and tests of the messages at a screen width of 80 characters. The complete test suite of version~\pkgversion{} was run on macOS with Stata~17, Stata~18 and StataNow~19.5. It has not yet been run on Linux or Windows for this version. % TODO(owner): update when the Linux and Windows test runs exist

@@ -1,0 +1,9 @@
+. capture noisily nwrem mail
+nwrem requires at least one effect: nodsnd nidrec nidsnd nodrec ntdegsnd
+ntdegrec frpsndsnd frrecsnd covsnd() covrec() covint() covevent() rsndsnd
+rrecsnd otpsnd itpsnd ospsnd ispsnd fesnd ferec feint psabba psabby psabxa
+psabxb psabxy psabay (see nwrem for what each computes).
+invalid syntax
+
+. display "return code: " _rc
+return code: 198

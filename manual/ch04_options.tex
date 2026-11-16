@@ -1,0 +1,120 @@
+\chapter{Syntax and options}\label{ch:options}
+
+This chapter lists every option of \nwrem{}. The effects are defined in Chapter~\ref{ch:effects}; the likelihoods and the estimators in Chapter~\ref{ch:model}; the names of the corresponding arguments of \relevent{} are in Appendix~\ref{app:translation}.
+
+\section{Syntax}
+
+\begin{lstlisting}
+nwrem [netname], effects [likelihood options] [risk set options] [prior options] [seed(#) level(#)]
+nwrem [, level(#)]                          (replays the last fit)
+nwrem version
+\end{lstlisting}
+\emph{netname} is the event network to fit; the default is the current network. It must be an event network declared with \texttt{nwset ..., eventtime()}; any other network is refused with return code 198. At least one effect is required (return code 198); there is no default effect. The options can be given in any order.
+
+\section{Effects}
+
+The options that select the statistics of the model. Chapter~\ref{ch:effects} gives the definition of each effect.
+\footnotesize
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{4.7cm}>{\raggedright\arraybackslash}p{11.0cm}@{}}
+\toprule
+Option & Description\\
+\midrule\endhead
+\opt{nodsnd}, \opt{nidrec}, \opt{nidsnd}, \opt{nodrec} & Normalized degrees: out-degree and in-degree of the sender and of the receiver.\\
+\opt{ntdegsnd}, \opt{ntdegrec} & Normalized total degree of the sender and of the receiver.\\
+\opt{frpsndsnd} & Inertia: the fraction of the sender's past sends that went to this receiver.\\
+\opt{frrecsnd} & Reciprocity of receipt: the fraction of the sender's past receipts that came from this receiver.\\
+\opt{rsndsnd}, \opt{rrecsnd} & Recency of sending and recency of receipt (reciprocal rank).\\
+\opt{otpsnd}, \opt{itpsnd} & Outbound and inbound two-paths.\\
+\opt{ospsnd}, \opt{ispsnd} & Outbound and inbound shared partners.\\
+\opt{covsnd(varlist)}, \opt{covrec(varlist)}, \opt{covint(varlist)} & Numeric covariates of the actors: of the sender, of the receiver, of both together. One coefficient per variable.\\
+\opt{covevent(netlist)} & Covariates of the pair, read from networks with the same actors. One coefficient per network.\\
+\opt{fesnd}, \opt{ferec}, \opt{feint} & Fixed effects of the actors as sender, as receiver, as both; one coefficient per actor but the first.\\
+\opt{psabba}, \opt{psabby}, \opt{psabxa}, \opt{psabxb}, \opt{psabxy}, \opt{psabay} & Participation shifts, which depend on the previous event.\\
+\bottomrule
+\end{longtable}
+\normalsize
+
+\section{Likelihood and conditioning}\label{sec:likopts}
+
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{4.7cm}>{\raggedright\arraybackslash}p{11.0cm}@{}}
+\toprule
+Option & Description\\
+\midrule\endhead
+\opt{interval} & The waiting-time (interval) likelihood, equation~(\ref{eq:interval}), instead of the ordinal likelihood. Requires strictly increasing event times.\\
+\opt{starttime(\#)} & Start of the observation, with \opt{interval}. Default 0. Without \opt{interval} the option is refused (return code 198).\\
+\opt{endtime(\#)} & End of the observation, with \opt{interval}. Default: the time of the last event, so that there is no last interval. Without \opt{interval} the option is refused.\\
+\opt{condition(\#)} & The first \# events only build the history of the statistics and do not enter the likelihood. Both likelihoods.\\
+\bottomrule
+\end{longtable}
+
+\subsection{interval, starttime() and endtime()}
+
+With \opt{interval} the likelihood of the waiting times, equation~(\ref{eq:interval}), replaces the ordinal likelihood. The first interval begins at \opt{starttime()}; a start later than the first event is an error (return code 459). \opt{endtime()} marks the end of the observation: the time from the last event to it contributes the probability of no event in that interval. An end earlier than the last event is an error (459). If \opt{endtime()} is not given the observation ends with the last event. Two or more events with the same time are refused (459). Because the rate of a pair with all statistics zero is one per unit of time, choose the unit of the time variable accordingly (Section~\ref{sec:nointercept}). The stored results \texttt{e(starttime)} and \texttt{e(endtime)} hold the window (\texttt{e(endtime)} only when \opt{endtime()} was given).
+
+\subsection{condition()}\label{sec:condition}
+
+\opt{condition(c)} lets the first $c$ events (in the order of the times) build the history of the statistics but removes them from the likelihood; $c$ must be a non-negative integer smaller than the number of events. This is useful where the statistics of the first events rest on too little history: the degree shares after one event are 0 or 1. The statistics of all later events still count the conditioned events. \texttt{e(N)} is the number of all events, \texttt{e(N\_cond)} the number of conditioned events. With \opt{interval} the first interval that counts is the one after event~$c$.
+
+\section{Risk set}\label{sec:riskopts}
+
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{4.7cm}>{\raggedright\arraybackslash}p{11.0cm}@{}}
+\toprule
+Option & Description\\
+\midrule\endhead
+\opt{riskset(netname)} & A network with the same actors. A tie value of 0 means that the ordered pair can never be an event, any other value that it can.\\
+\opt{entry(varname)} & Per-actor time of entry. Before it the actor is not in the risk set, as sender and as receiver. A missing value: present from the start.\\
+\opt{exit(varname)} & Per-actor time of exit. After it the actor leaves the risk set. A missing value: present until the end.\\
+\bottomrule
+\end{longtable}
+
+\opt{riskset()} reads the ties of the network: the cell from the sender to the receiver decides, the diagonal is ignored. A network with missing tie values is refused (return code 416), a two-mode network is refused (return code 6088), and the network must have the same number of actors as the event network (return code 198). \opt{entry()} and \opt{exit()} name numeric variables of the current dataset and are matched to the actors exactly as the covariates of Section~\ref{sec:declare}; each may be given alone. The times are on the scale of the event times. An actor is present at an event whose time lies between its entry and its exit time, both ends included. The three options can be combined. If an event involves a pair that is not in the risk set, or an actor outside its window, \nwrem{} stops with return code~459 and names the event (its number in the sorted sequence); remove the event or widen the risk set.
+
+\section{Posterior mode}\label{sec:priors}
+
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{4.7cm}>{\raggedright\arraybackslash}p{11.0cm}@{}}
+\toprule
+Option & Description\\
+\midrule\endhead
+\opt{postmode} & Posterior mode instead of the maximum likelihood estimate: independent Student $t$ priors on all coefficients.\\
+\opt{priormean(\#)} & Location of the prior. Default 0.\\
+\opt{priorscale(\#)} & Scale of the prior; must be positive. Default 100.\\
+\opt{priordf(\#)} & Degrees of freedom of the prior; must be positive. Default 4. \opt{priordf(.)} is a normal prior.\\
+\bottomrule
+\end{longtable}
+
+The three prior options are refused without \opt{postmode} (return code 198). The prior is the same for every coefficient, including the coefficients of the fixed effects and the covariates. The posterior mode corresponds to \texttt{fit.method="BPM"} of \relevent{} with \texttt{prior.mean}, \texttt{prior.scale} and \texttt{prior.nu}. The prior is not applied to \texttt{e(ll)}; the stored results \texttt{e(priormean)}, \texttt{e(priorscale)} and \texttt{e(priordf)} hold the prior of the fit.
+
+\section{Other options}
+
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{4.7cm}>{\raggedright\arraybackslash}p{11.0cm}@{}}
+\toprule
+Option & Description\\
+\midrule\endhead
+\opt{seed(\#)} & Sets the random-number seed before the estimation; an integer from 0 to 2147483647 (anything else: return code 198). The fit starts from zero and uses random starting values only when the Newton iteration does not reach a maximum (no maximum exists, or effects are not identified), so the seed makes such fits reproducible. Different seeds give the same estimate up to the convergence tolerance.\\
+\opt{level(\#)} & Confidence level of the displayed intervals. Default 95. Also accepted by the replay form of the command.\\
+\bottomrule
+\end{longtable}
+
+\section{Covariates of the actors}\label{sec:covactors}
+
+\opt{covsnd(varlist)}, \opt{covrec(varlist)} and \opt{covint(varlist)} take numeric variables of the current dataset (a string variable is refused with return code 109), with one value per actor as described in Section~\ref{sec:declare}. Every variable gets its own coefficient. The same variable may appear in several of the three options. The coefficient of a variable \texttt{x} is named \texttt{covsnd\_x}, \texttt{covrec\_x} or \texttt{covint\_x}. \nwrem{} has no effect that compares categories, so a categorical attribute is entered as indicator variables.
+
+\section{Covariates of the pair}\label{sec:covevent}
+
+\opt{covevent(netlist)} takes one or several networks. A pair covariate belongs to the ordered pair (sender, receiver), not to one actor, so it is read from the tie values of another network, as the dyadic covariates of \texttt{nwergm} are. Declare the covariate as its own network first and name it in the option; the coefficient is named \texttt{covevent\_}\emph{netname}. The rules:
+\begin{itemize}[nosep]
+  \item The network must have the same actors as the event network (return code 198).
+  \item The value for the ordered pair (sender, receiver) enters the rate of that pair directly; there is no broadcasting of an actor value, as with \opt{covsnd()}.
+  \item A two-mode network is refused (return code 6088), and so is a network with missing tie values (return code 416). The diagonal is not part of the risk set; a missing or non-zero diagonal is read as zero.
+  \item Declaring a covariate network from an edge list with \texttt{nwset} does \emph{not} symmetrize it: an ordered pair without a row gets the value 0 even if the reverse pair was given. For a symmetric covariate supply both ordered pairs, or build it from a matrix (Section~\ref{sec:ex-cov}). For a directional covariate ("$i$ reports to $j$") the asymmetry is exactly what \opt{covevent()} is for. If you give the covariate as an edge list, add the option \texttt{edgelist} to \texttt{nwset}, because \texttt{nwset} otherwise reads three variables as a wide affiliation matrix.
+\end{itemize}
+
+\section{Effects that cannot be estimated}\label{sec:collinear}
+
+\paragraph{Exact collinearity.} An effect that is an exact function of the effects before it in the model, apart from a term that is constant over the risk set at every event, cannot change the likelihood. Examples are \opt{ntdegsnd} together with \opt{nodsnd} and \opt{nidsnd} (it is half their sum), \opt{covint(x)} together with \opt{covsnd(x)} and \opt{covrec(x)}, or any of \opt{frpsndsnd}, \opt{rsndsnd} and the fixed effects in a very small network. \nwrem{} finds such effects before the optimization, using the order of Table~\ref{tab:effects}: the effect that comes later is left out. Its coefficient is reported as 0 with the label \texttt{(omitted)}, its variance is 0, it is named in \texttt{e(unidentified)}, and a note says so under the table. The remaining coefficients and the log likelihood are those of the model without it. All effects are examined, including the participation shifts, the triadic effects and the fixed effects. An effect is omitted when what is left of its sum of squares, centered within each risk set, after the effects before it is below $10^{-12}$ of its uncentered sum of squares. The check is exact for statistics that are exact functions of others; it does not detect a near-collinearity (see below).
+
+\paragraph{Near-collinearity and separation.} A set of effects that is nearly, but not exactly, collinear gives a likelihood with a flat ridge: different starting values would reach visibly different individual coefficients with almost the same log likelihood. Because the fit starts at zero and converges to the exact maximum, the estimates are reproducible, but a single coefficient on a ridge is imprecise, and its standard error is large. The degree effects are running shares that converge towards $1/n$ for every actor as the history grows, so their cross-actor spread narrows; estimates of these effects can stay noisy even with thousands of events. This is a property of the effects, not of the program. A coefficient that tends to infinity because the data separate (an actor that never sends, with \opt{fesnd}) is reported with a huge negative value and a standard error far above 100; such an effect is listed in \texttt{e(unidentified)} as well, with the same note, and is \emph{not} set to zero. Use \opt{postmode} to obtain a finite estimate.
+
+\paragraph{Fixed effects.} The fixed effects add one coefficient per actor but the first for each of \opt{fesnd}, \opt{ferec} and \opt{feint}. A model with more than 600 coefficients of this kind (the number of actors times the number of fixed-effect options above 600) is refused (return code 198). They are evaluated for every pair at every event, so they are slower for large networks than the other effects.
+
+\paragraph{Other stops.} A model that cannot be fitted (for example, fewer than two events: return code 2001; the optimization found no maximum: return code 430) stops with a message. The messages that the examples produced are listed in Section~\ref{sec:messages}.

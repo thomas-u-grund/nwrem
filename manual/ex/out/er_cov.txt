@@ -1,0 +1,14 @@
+. capture noisily nwrem mail, covsnd(nosuchvar)
+variable nosuchvar not found
+(error in option covsnd())
+
+. display "return code: " _rc
+return code: 111
+
+. capture noisily nwrem mail, covevent(ordinary)
+covevent() network ordinary has 8 actors but mail has 144 - covevent() requires
+the same actors as mail.
+invalid syntax
+
+. display "return code: " _rc
+return code: 198

@@ -1,0 +1,20 @@
+. nwrem core12, psabba psabby psabxa psabxb psabxy psabay
+------------------------------------------------------------
+Relational event model (ordinal partial likelihood, MLE)
+Network: core12                        Actors: 12
+Events: 67                             Log likelihood: -262.8356
+------------------------------------------------------------
+------------------------------------------------------------------------------
+      core12 | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+      psabba |   .4418328   .4272466     1.03   0.301    -.3955553    1.279221
+      psabby |   -4.49981   1.054093    -4.27   0.000    -6.565793   -2.433826
+      psabxa |  -29.47336   264795.5    -0.00   1.000    -519019.2    518960.3
+      psabxb |  -2.420368   .4859127    -4.98   0.000    -3.372739   -1.467997
+      psabxy |  -3.438938   .3867462    -8.89   0.000    -4.196946   -2.680929
+      psabay |  -2.420368   .4859127    -4.98   0.000    -3.372739   -1.467997
+------------------------------------------------------------------------------
+Note: no usable standard error for psabxa.
+      These effects are not identified: typically an effect is an exact function
+      of others in the model (the total-degree share ntdegsnd is half the sum of
+      nodsnd and nidsnd). Its estimate is arbitrary; drop one of the effects.

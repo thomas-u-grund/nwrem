@@ -1,0 +1,59 @@
+. nwwebuse manufacturing, nwclear
+(plain Stata dataset loaded - not a saved network file; build a network from it
+directly, e.g. with nwfromedge or nwgenerate)
+
+. list in 1/5
+
+     +------------------------------+
+     | sender   receiver          t |
+     |------------------------------|
+  1. |    E39        E81   3.235255 |
+  2. |    E39        E81   3.235822 |
+  3. |   E112       E136    3.25566 |
+  4. |   E112        E60    3.25728 |
+  5. |   E112        E57   3.257963 |
+     +------------------------------+
+
+. count
+  50,233
+
+. quietly levelsof sender, local(a) clean
+
+. quietly levelsof receiver, local(b) clean
+
+. local all : list a | b
+
+. display "actors in the log: " `: word count `all''
+actors in the log: 144
+
+. keep if t < 5
+(49,602 observations deleted)
+
+. count
+  631
+
+. display "span in days: " %5.2f (t[_N] - t[1])
+span in days:  1.75
+
+. quietly levelsof sender, local(a) clean
+
+. quietly levelsof receiver, local(b) clean
+
+. local present : list a | b
+
+. local miss : list all - present
+
+. display "actors in the window: " `: word count `present'' ", added as isolates: 
+> " `: word count `miss''
+actors in the window: 102, added as isolates: 42
+
+. nwset sender receiver, directed eventtime(t) name(mail)
+
+. local miss : subinstr local miss " " ",", all
+
+. nwaddnodes mail, nodenames(`miss')
+
+. nwset
+(1 networks)
+--------------------
+      mail

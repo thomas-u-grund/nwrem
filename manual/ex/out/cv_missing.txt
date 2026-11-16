@@ -1,0 +1,9 @@
+. replace level = . in 1
+(1 real change made, 1 to missing)
+
+. capture noisily nwrem mail, frpsndsnd covsnd(level)
+covsnd(level): 1 actor(s) of mail have a missing value; the covariate must be
+defined for every actor.
+
+. display "return code: " _rc
+return code: 416

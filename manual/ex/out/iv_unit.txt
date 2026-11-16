@@ -1,0 +1,36 @@
+. * the time unit in which the null model has a rate of 1 per ordered pair: the le
+> ngth of the window times n(n-1) / N
+. scalar unit = (5 - 3.2) * 144 * 143 / 628
+
+. display "one time unit = " %5.1f unit " days"
+one time unit =  59.0 days
+
+. quietly use `ev', clear
+
+. quietly duplicates drop t, force
+
+. quietly replace t = (t - 3.2) / unit
+
+. quietly nwbuild mail2
+
+. nwrem mail2, nodsnd nidrec frpsndsnd interval starttime(0) endtime(`=(5 - 3.2) /
+>  unit')
+------------------------------------------------------------
+Relational event model (waiting-time likelihood, MLE)
+Network: mail2                         Actors: 144
+Events: 628                            Log likelihood: -214.4741
+------------------------------------------------------------
+------------------------------------------------------------------------------
+       mail2 | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+      nodsnd |   1.384774   .6537213     2.12   0.034     .1035033    2.666044
+      nidrec |     3.8404    .581565     6.60   0.000     2.700553    4.980246
+   frpsndsnd |   4.727286   .1137118    41.57   0.000     4.504415    4.950157
+------------------------------------------------------------------------------
+
+. estimates store interval
+
+. display "likelihood: " e(lik) "   window: " e(starttime) " to " %6.4f e(endtime)
+>  "   log likelihood of the null model: " %9.2f e(ll_0)
+likelihood: interval   window: 0 to 0.0305   log likelihood of the null model:   -
+> 628.00

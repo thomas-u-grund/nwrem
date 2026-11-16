@@ -1,0 +1,34 @@
+\chapter{From R's \texttt{relevent} to \texttt{nwrem}}\label{app:translation}
+
+The table translates the arguments and effects of \texttt{rem.dyad()} of \relevent{} to \nwrem{}. The right column is the Stata command or option; \texttt{net} stands for a network declared as an event network.
+
+\footnotesize
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{6.0cm}>{\raggedright\arraybackslash}p{9.7cm}@{}}
+\toprule
+R (\texttt{relevent}) & \nwrem{}\\
+\midrule\endhead
+The event list passed to \texttt{rem.dyad(edgelist, n, \ldots)} & \texttt{nwset sender receiver, directed eventtime(t) name(net)}; actors that are absent from the log: \texttt{nwaddnodes}\\
+\texttt{rem.dyad(\ldots, ordinal=TRUE, fit.method="MLE")} & \texttt{nwrem net, }\emph{effects}\\
+\texttt{NODSnd}, \texttt{NIDRec}, \texttt{NIDSnd}, \texttt{NODRec} & \opt{nodsnd}, \opt{nidrec}, \opt{nidsnd}, \opt{nodrec}\\
+\texttt{NTDegSnd}, \texttt{NTDegRec} & \opt{ntdegsnd}, \opt{ntdegrec}\\
+\texttt{FrPSndSnd} & \opt{frpsndsnd} (inertia)\\
+\texttt{FrRecSnd} & \opt{frrecsnd} (reciprocity of receipt)\\
+\texttt{RSndSnd}, \texttt{RRecSnd} & \opt{rsndsnd}, \opt{rrecsnd}\\
+\texttt{OTPSnd}, \texttt{ITPSnd}, \texttt{ISPSnd} & \opt{otpsnd}, \opt{itpsnd}, \opt{ispsnd}\\
+\texttt{OSPSnd} & \opt{ospsnd}: the symmetric statistic; the estimate differs from that of \relevent{}~\releventver{} (Section~\ref{sec:triadic})\\
+\texttt{FESnd}, \texttt{FERec}, \texttt{FEInt} & \opt{fesnd}, \opt{ferec}, \opt{feint} (one coefficient per actor but the first)\\
+\texttt{PSAB-BA}, \texttt{PSAB-BY}, \texttt{PSAB-XA}, \texttt{PSAB-XB}, \texttt{PSAB-XY}, \texttt{PSAB-AY} & \opt{psabba}, \opt{psabby}, \opt{psabxa}, \opt{psabxb}, \opt{psabxy}, \opt{psabay}\\
+The other participation shifts (\texttt{PSAB-B0}, \texttt{PSA0-X0}, \texttt{PSA0-XA}, \texttt{PSA0-XY}, \texttt{PSAB-X0}, \texttt{PSA0-AY}, \texttt{PSAB-A0}) & not implemented (always zero in \relevent{})\\
+\texttt{CovSnd}, \texttt{CovRec}, \texttt{CovInt} with \texttt{covar=list(\ldots)} & \opt{covsnd(varlist)}, \opt{covrec(varlist)}, \opt{covint(varlist)}: numeric variables of the current dataset, one value per actor\\
+\texttt{CovEvent} & \opt{covevent(netlist)}: networks with the same actors that hold the values of the pairs\\
+\texttt{ordinal=FALSE} (waiting times) & \opt{interval} with \opt{starttime()} and \opt{endtime()}\\
+\texttt{conditioned.obs} & \opt{condition(k)}\\
+\texttt{fit.method="BPM"} with \texttt{prior.mean}, \texttt{prior.scale}, \texttt{prior.nu} & \opt{postmode} with \opt{priormean()}, \opt{priorscale()}, \opt{priordf()}\\
+\texttt{rem()} with a support matrix & \opt{riskset(net)} (a pair with the value 0 cannot occur), \opt{entry(var)} and \opt{exit(var)} for actors that enter or leave\\
+\texttt{hessian=TRUE/FALSE} & the covariance matrix is always computed\\
+\texttt{fit.method="MCMC"}, \texttt{"BSIR"}; \texttt{sample.size}; \texttt{gof} & not implemented\\
+\texttt{summary()} of the fit & the table printed by \texttt{nwrem}; \texttt{e(b)}, \texttt{e(V)}, \texttt{e(ll)}, \texttt{e(N)}, \texttt{e(nodes)}\\
+\texttt{logLik()}, \texttt{AIC()}, \texttt{BIC()} & \texttt{e(ll)}, \texttt{e(aic)}, \texttt{e(bic)}; \texttt{estimates stats}\\
+\bottomrule
+\end{longtable}
+\normalsize

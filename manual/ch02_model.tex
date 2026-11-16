@@ -1,0 +1,51 @@
+\chapter{The model}\label{ch:model}
+
+This chapter states the model that \nwrem{} fits and the quantities that it reports. The notation follows Butts~\cite{butts2008}. The statistics themselves are defined in Chapter~\ref{ch:effects}; how to run the command is the subject of Chapters~\ref{ch:start} and~\ref{ch:options}.
+
+\section{Events, history and risk sets}
+
+The data are $m$ events $e_1,\dots,e_m$ among $n$ actors. Event $e_i=(s_i,r_i,t_i)$ is an act of the sender $s_i$ towards the receiver $r_i\neq s_i$ at time $t_i$, in the order of the times. Events with the same time keep the order in which they stand in the network; because the ordinal likelihood depends only on the order, this order is part of the data. Every event is read as directed from the first variable (the sender) to the second (the receiver).
+
+Let $h_i$ be the history before event~$i$: the events $e_1,\dots,e_{i-1}$. At event~$i$ every ordered pair $(j,k)$ with $j\neq k$ that is in the \emph{risk set} $\mathcal R_i$ could have been the event. By default $\mathcal R_i$ holds all $n(n-1)$ ordered pairs; Section~\ref{sec:riskset-model} describes the restrictions. Each pair has a vector of \emph{statistics} $x(j,k;h_i)$, computed from the history only: the share of the earlier events in which $j$ sent, whether $j$ has written to $k$ before, how recently, and so on. All statistics depend on the earlier events, never on the coefficients and never on the event itself.
+
+\section{The rate of a pair}
+
+The model gives each pair a rate (an intensity) that depends on the statistics through a log-linear predictor,
+\begin{equation}\label{eq:rate}
+\lambda_i(j,k)=\exp\{\theta^{\top}x(j,k;h_i)\},\qquad (j,k)\in\mathcal R_i ,
+\end{equation}
+with the coefficient vector $\theta$ to be estimated. A positive coefficient means that pairs with a larger value of the statistic have a higher rate. The coefficients are log rate ratios: a difference of one unit in a statistic multiplies the rate of a pair by $\exp(\theta_p)$.
+
+\section{The ordinal likelihood}\label{sec:ordinal}
+
+The default likelihood uses only the order of the events. Given that an event occurs at all, the probability that it is the pair $(j,k)$ is the rate of that pair relative to the rates of all pairs in the risk set. The likelihood is the product of these probabilities over the events,
+\begin{equation}\label{eq:ordinal}
+L(\theta)=\prod_{i>c}\frac{\exp\{\theta^{\top}x(s_i,r_i;h_i)\}}{\sum_{(j,k)\in\mathcal R_i}\exp\{\theta^{\top}x(j,k;h_i)\}} .
+\end{equation}
+It is a partial likelihood in the sense of Cox~\cite{cox1972}: the rates of all pairs may share an unspecified baseline that changes over time, and it cancels. The first $c$ events, set with \opt{condition(c)}, are used to build the history of the statistics but do not enter the product (Section~\ref{sec:condition}).
+
+\section{The waiting-time (interval) likelihood}\label{sec:interval-model}
+
+With the option \opt{interval} the times between the events enter the likelihood as well, so that the model describes the \emph{rate of events} and not only their order. Let $\Delta_i=t_i-t_{i-1}$, with $t_0$ the start of the observation (\opt{starttime()}, default $0$), and let $\Lambda_i=\sum_{(j,k)\in\mathcal R_i}\lambda_i(j,k)$ be the total rate over the risk set. The contribution of event~$i$ is the density of the waiting time and of the pair, $\lambda_i(s_i,r_i)\exp(-\Delta_i\Lambda_i)$. The time from the last event to the end of the observation $T$ (\opt{endtime()}) contributes the probability of no event in it, $\exp\{-(T-t_m)\Lambda_{m+1}\}$. The log likelihood is
+\begin{equation}\label{eq:interval}
+\ell(\theta)=\sum_{i>c}\Bigl[\theta^{\top}x(s_i,r_i;h_i)-\Delta_i\Lambda_i\Bigr]-(T-t_m)\Lambda_{m+1}.
+\end{equation}
+The waiting times must be strictly increasing: two events with the same time are refused (return code 459), as \relevent{} refuses them. With \opt{condition(c)} the first interval that counts is the one after event~$c$.
+
+\section{There is no intercept}\label{sec:nointercept}
+
+\nwrem{} has no intercept option. In the ordinal likelihood a term that is constant over the pairs of a risk set cancels in the ratio of equation~(\ref{eq:ordinal}); this is the same reason for which a Cox model has no identifiable baseline. The waiting-time model has no intercept either: a pair with all statistics equal to zero has the rate $1$ per unit of time. The scale of the time variable therefore fixes the overall level of the rates, and the coefficients of statistics that are shares (the degree effects, the inertia effects) have to make up for a baseline that does not fit. If the times are measured in a unit in which a typical pair has a rate far below~1, these coefficients become large and negative. Choose the unit of time so that the rate of a typical pair is of the order of one event per unit; Section~\ref{sec:ex-interval} shows the effect and a simple rule.
+
+\section{Risk sets}\label{sec:riskset-model}
+
+The risk set can be restricted in two ways, and the two can be combined. A network (\opt{riskset()}) lists the ordered pairs that can ever be an event; all other pairs are removed from every $\mathcal R_i$. Per-actor times of entry and exit (\opt{entry()}, \opt{exit()}) remove an actor, as sender and as receiver, from the risk sets of the events that lie outside its window. An actor is present at an event whose time lies between its entry and its exit time, both ends included. The risk set of an interval is the risk set at the time of the event that ends it. In the last interval, from the last event to \opt{endtime()}, an actor is present if its entry time is not later than the end of the observation and its exit time is not earlier than it. The statistics are always computed from all events; only the pairs over which the likelihood normalizes are restricted. An event of a pair that is not in the risk set is an error.
+
+\section{Estimation}\label{sec:estimation}
+
+The statistics do not depend on $\theta$, so the log likelihood is a sum of log-sum-exp functions of a linear predictor and is concave in $\theta$. It has a unique maximum unless the effects are collinear or the data separate (an effect that never occurs among the events, for example, has a coefficient that tends to minus infinity). \nwrem{} starts at $\theta=0$ and takes damped Newton steps with the exact gradient and the exact Hessian of the likelihood (a full step, halved until the log likelihood does not fall), until the Newton decrement is at the level of round-off. The covariance matrix of the estimates is the inverse of minus the Hessian at the maximum, the observed information; the table shows the standard errors, $z$ statistics, $p$-values and confidence intervals that follow from the normal approximation.
+
+The effects that are exact functions of the effects before them in the model are found before the optimizer runs and left out, with the coefficient reported as $0$ (Section~\ref{sec:collinear}).
+
+\paragraph{Posterior mode.} With \opt{postmode} the function that is maximized is the log likelihood plus the log density of independent Student $t$ priors, one for each coefficient, with location \opt{priormean()}, scale \opt{priorscale()} and \opt{priordf()} degrees of freedom: the posterior mode, as \relevent{}'s \texttt{fit.method="BPM"}. A normal prior is obtained with \opt{priordf(.)}. The defaults are the location $0$, the scale $100$ and four degrees of freedom, a very weak prior. The standard errors are those of the curvature of the log posterior at the mode, and \texttt{e(ll)} is the log likelihood at the mode without the prior. A posterior mode is useful where the maximum does not exist, because a coefficient tends to infinity, and as a shrinkage estimate.
+
+\paragraph{The null model.} \texttt{e(ll\_0)} is the log likelihood of the model without effects. For the ordinal likelihood it is $-\sum_{i>c}\ln|\mathcal R_i|$, the same probability for every pair of the risk set. For the waiting-time likelihood it is the log likelihood of a constant rate $\rho$ for every ordered pair, with $\rho=m/\{(T-t_0)\,n(n-1)\}$ estimated from all events; it is defined only for the complete risk set.

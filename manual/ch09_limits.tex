@@ -1,0 +1,68 @@
+\chapter{Limits, known issues and messages}\label{ch:limits}
+
+This chapter says what \nwrem{} cannot do and which problems are known, and explains the messages that a user is likely to meet.
+
+\section{What is not implemented}
+
+\begin{itemize}
+  \item \textbf{Bayesian simulation.} The simulation-based estimation of \relevent{} (\texttt{fit.method} MCMC and BSIR) is not implemented: its output is random and cannot be validated against the random numbers of R. The posterior mode (\opt{postmode}) is available.
+  \item \textbf{Sampling of the risk set} (\texttt{sample.size} of \relevent{}) is not implemented; the likelihood always uses the complete risk set, or the restriction of \opt{riskset()}, \opt{entry()} and \opt{exit()}.
+  \item \textbf{Simulation of event sequences} and \textbf{goodness-of-fit residuals and predictions} are not implemented.
+  \item \textbf{Covariates that change over time.} All covariates (\opt{covsnd()}, \opt{covrec()}, \opt{covint()}, \opt{covevent()}) are fixed in time. Covariates that change with the events would need an event-wise data structure. Statistics of the history (degrees, inertia, recency, triads, participation shifts) change with the events by definition.
+  \item \textbf{The participation shifts that are always zero.} \relevent{} defines seven participation shifts with undefined targets (for example \texttt{PSAB-B0}); its coefficients for them are always zero. \nwrem{} offers the six shifts that are not (Section~\ref{sec:ps}).
+  \item \textbf{No intercept} (Section~\ref{sec:nointercept}).
+  \item \textbf{Two-mode event networks} are refused.
+  \item \textbf{No dialog boxes.} The package has no dialog.
+\end{itemize}
+
+\section{Known issues and cautions}
+
+\begin{itemize}
+  \item \textbf{\texttt{ospsnd} differs from \relevent{}.} By design (Section~\ref{sec:triadic}).
+  \item \textbf{The waiting-time likelihood and the unit of time.} The rate of a pair with all statistics zero is one per unit of time. If the unit is unsuitable, the coefficients of the share effects become very large (Section~\ref{sec:ex-interval}).
+  \item \textbf{Noisy degree effects.} Degree-type effects are running shares that converge to $1/n$; estimates can stay noisy with thousands of events, and several of them in one model can lie on a flat ridge of the likelihood (Section~\ref{sec:collinear}).
+  \item \textbf{Separation.} A coefficient that tends to minus (or plus) infinity because an actor never sends or receives, or an effect never occurs, is reported with a huge value and standard error and is listed in \texttt{e(unidentified)}; \opt{postmode} gives finite values.
+  \item \textbf{Effects with a heavy cost.} The fixed effects are evaluated densely for every pair at every event, and a model with a large number of actors and fixed effects is slow; the effects that depend on the sparse history (inertia, recency, triadic effects, covariate networks) cost time in proportion to the number of pairs that have been in contact. Chapter~\ref{ch:technical} gives measured times.
+  \item \textbf{Ties in time.} The ordinal likelihood keeps tied events in the order of the rows, so the estimates depend on this order if there are many ties. The waiting-time likelihood refuses ties.
+  \item \textbf{Platforms.} The plugin is built for macOS, Linux and Windows; the test suite of this version has been run on macOS only (Section~\ref{sec:install}). Windows has not been tested. % TODO(owner): update when Linux and Windows are tested
+  \item \textbf{Results of other versions.} Results of fits made with other versions may differ; report the version printed by \texttt{nwrem version}.
+\end{itemize}
+
+\section{Messages and what to do}\label{sec:messages}
+
+The messages that the examples of this manual produced and those that the checks of the command produce, and the usual remedy.
+\footnotesize
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{6.4cm}>{\raggedright\arraybackslash}p{9.3cm}@{}}
+\toprule
+Message (return code) & Meaning and remedy\\
+\midrule\endhead
+\textit{nwrem requires at least one effect} (198) & No effect was given. Name at least one.\\
+\textit{nwrem requires a network declared via nwset's eventtime() option} (198) & The network is not an event network. Declare it with \texttt{nwset ..., eventtime()}.\\
+\textit{nwrem does not support two-mode networks} (198) & Event networks must be one-mode.\\
+\textit{starttime() and endtime() belong to the waiting-time likelihood} (198) & Add the option \opt{interval}.\\
+\textit{priormean(), priorscale() and priordf() belong to posterior-mode estimation} (198) & Add the option \opt{postmode}.\\
+\textit{condition() must be a non-negative integer} (198); \textit{condition() must be smaller than the number of events} (198) & Give an integer from 0 to the number of events minus one.\\
+\textit{seed() must be an integer between 0 and 2147483647} (198) & Use a valid seed.\\
+\textit{N actor(s) of net have no row in the current dataset} / \textit{have more than one row} (198) & The covariates and the entry and exit times need exactly one row per actor with the label in \texttt{\_nwnode}; load the dataset with \texttt{nwload net, xvars}.\\
+\textit{the current dataset has N observations but net has M actors} (198) & Without \texttt{\_nwnode} the data need one row per actor, in the actor order of the network.\\
+\textit{covsnd(x): N actor(s) have a missing value} (416) & The covariate must be defined for every actor. \\
+\textit{covevent() network has N actors} (198), \textit{has missing tie values} (416), two-mode (6088) & A covariate network must have the same actors, no missing ties and one mode.\\
+\textit{N event(s) have a sender or receiver that is not an actor}, \textit{a missing event time} (416) & Drop such rows before \texttt{nwset}.\\
+\textit{event k has sender == receiver} (3498) & A self-loop; drop such rows.\\
+\textit{the interval likelihood needs strictly increasing event times} (459) & Events with equal times: drop or separate them, or use the ordinal likelihood.\\
+\textit{starttime(\#) is later than the first event}; \textit{endtime(\#) is earlier than the last event} (459) & Correct the window.\\
+\textit{event k ... is a dyad that is not in the risk set} (459) & The pair of the event is not allowed by \opt{riskset()}. Widen the risk set or drop the event.\\
+\textit{event k ... involves an actor outside its entry() / exit() window} (459) & Correct the times or drop the event.\\
+\textit{the fixed effects add N parameters per effect ... too many} (198) & At most 600 fixed-effect coefficients. Use fewer actors or fewer fixed-effect options.\\
+\textit{nwrem needs at least 2 events} (2001) & Too few events.\\
+\textit{the optimization did not find a maximum of the likelihood} (430) & No maximum was reached; check for separation and collinearity, use \opt{postmode}.\\
+\textit{no usable standard error for \dots} (a note) & Effects that are collinear (coefficient 0, \texttt{(omitted)}) or not identified; drop an effect or use \opt{postmode} (Section~\ref{sec:collinear}).\\
+\textit{the compiled plugin \dots{} was not found} (601) & The plugin of your platform is missing. Reinstall the package; build it with \texttt{nwinstall, buildplugin(nwrem)}.\\
+\textit{the installed plugin \dots{} is too old} (3495) & The plugin does not fit the \texttt{.ado} files or cannot be loaded. Reinstall; restart Stata; build it on your machine if it does not load.\\
+\textit{\dots{} too new to be run by this version of Stata} (3499) & The Mata library was built by a newer Stata; build it with \texttt{nwinstall, buildmata(nwrem)}.\\
+\bottomrule
+\end{longtable}
+\normalsize
+The following listing shows several of these messages as the program prints them.
+\showlog{er_options}
+\showlog{er_selfloop}

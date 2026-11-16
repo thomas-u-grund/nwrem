@@ -1,0 +1,78 @@
+\documentclass[11pt,a4paper]{report}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern,microtype}
+\usepackage[margin=2.4cm]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs,longtable,array,amsmath,amssymb,xcolor,listings,hyperref,enumitem,titlesec,etoolbox}
+\hypersetup{colorlinks=true,linkcolor=blue!50!black,urlcolor=blue!50!black,citecolor=blue!50!black,pdftitle={nwrem: Relational event models in Stata. Manual},pdfauthor={Thomas U. Grund}}
+\lstdefinestyle{stata}{basicstyle=\ttfamily\footnotesize,backgroundcolor=\color{black!4},frame=single,rulecolor=\color{black!20},breaklines=true,columns=fullflexible,keepspaces=true,xleftmargin=2pt,xrightmargin=2pt,aboveskip=8pt,belowskip=8pt}
+\lstset{style=stata}
+\setlength{\emergencystretch}{3em}
+\newcommand{\nwrem}{\texttt{nwrem}}
+\newcommand{\relevent}{\texttt{relevent}}
+\newcommand{\releventver}{1.2-1}
+% \opt sets an option name in typewriter type and lets long names break after ( : , and _ so that they do not run into the next table column
+\ExplSyntaxOn
+\tl_new:N \l__nwrem_opt_tl
+\NewDocumentCommand{\opt}{m}
+  {
+    \tl_set:Nn \l__nwrem_opt_tl {#1}
+    \regex_replace_all:nnN { ([\:\,]) } { \1 \c{allowbreak}\cB\{\cE\} } \l__nwrem_opt_tl
+    \regex_replace_all:nnN { \c{\_} } { \c{\_} \c{allowbreak}\cB\{\cE\} } \l__nwrem_opt_tl
+    \regex_replace_all:nnN { ([a-z])([A-Z]) } { \1 \c{allowbreak}\cB\{\cE\} \2 } \l__nwrem_opt_tl
+    \regex_replace_all:nnN { (/) } { \1 \c{allowbreak}\cB\{\cE\} } \l__nwrem_opt_tl
+    \regex_replace_all:nnN { ([\|\(\[=]) } { \1 \c{allowbreak}\cB\{\cE\} } \l__nwrem_opt_tl
+    \texttt{ \tl_use:N \l__nwrem_opt_tl }
+  }
+\ExplSyntaxOff
+% the listing of the output of an example (manual/ex/out/<name>.txt, cut from the Stata logs by ex/mklistings.py)
+\newcommand{\showlog}[1]{\lstinputlisting{ex/out/#1.txt}}
+\newcommand{\showlogpart}[3]{\lstinputlisting[firstline=#2,lastline=#3]{ex/out/#1.txt}}
+\newcommand{\inc}[1]{\typeout{>>>#1}\input{#1}}
+\input{gen_validnums.tex}
+\newcommand{\manualseries}{1.4}
+% The manual is labelled by the minor series (valid for 1.4.x): change \manualseries only for a new minor or major release whose documented behaviour changed.
+\newcommand{\pkgversion}{1.4.0}
+\newcommand{\pkgdate}{16 November 2026}
+% Exact version and date of the release that produced the listings; the examples were run with the nwcommands core version \corever.
+\newcommand{\corever}{3.26.0}
+% DOI of the archived manual (Zenodo): the all-versions DOI of the record. TO BE REPLACED when the owner has created the record (see ZENODO.md); do not invent one.
+\newcommand{\manualdoi}{TO-BE-REPLACED}% TODO(owner): all-versions Zenodo DOI, format 10.5281/zenodo.NNNNNNNN
+\newcommand{\citedoi}{\ifdefempty{\manualdoi}{}{ Zenodo. \url{https://doi.org/\manualdoi}}}
+\title{\textbf{nwrem}\\[4pt]\large Relational event models in Stata\\ (a package that builds on \texttt{nwcommands})\\[6pt]\normalsize User manual and reference}
+\author{Thomas U. Grund\\ RWTH Aachen University}
+\date{This manual describes \texttt{nwrem} \manualseries.x\\ (examples produced with \texttt{nwrem} \pkgversion, \pkgdate)}
+\begin{document}
+\maketitle
+\begin{quote}\noindent\textbf{How to cite.} This manual describes the series~\manualseries{} of \nwrem{} (it holds for all versions \manualseries.x); the listings were produced with version~\pkgversion{} (\pkgdate). It is the citable reference for the package. Please cite it as:\par\smallskip
+\noindent Grund, T.~U. (2026). \emph{nwrem: Relational event models in Stata. Manual.}\citedoi\par\smallskip
+\noindent Please also report the exact version of the program that produced your results, as printed by \texttt{nwrem version} and stored in \texttt{e(version)}.
+\end{quote}
+\chapter*{Acknowledgments}\addcontentsline{toc}{chapter}{Acknowledgments}
+\nwrem{} implements the relational event framework of Carter T.\ Butts~\cite{butts2008} and exists because of his work. The R package \relevent{}~\cite{relevent}, also by Butts, is the reference implementation against which the statistics, the likelihoods and the estimates of \nwrem{} were checked (version~\releventver{}); the R code and manuals of \relevent{} were the specification against which the Stata code was written and tested. \nwrem{} is not affiliated with or endorsed by the author of \relevent{}, and its errors are the author's. It is meant for researchers who work in Stata or prefer it to R. It is not a replacement for \relevent{}, which remains the reference and the more complete program.
+
+\paragraph{Use of an AI coding assistant.} The software was developed with Claude Code (Anthropic), an AI coding assistant, working under the author's direction. It helped port algorithms from \relevent{} into Stata, Mata and C and helped write the tests. The author specified the scope, reviewed the code, and is responsible for the package. Its correctness rests on validation, not on the assistant: the results are compared numerically with \relevent{}, and the test suite reruns these comparisons. This manual was drafted with the same assistant; every listing in it is the output of a real run of the program.
+
+\tableofcontents
+\inc{ch01_intro}
+\inc{ch02_model}
+\inc{ch03_start}
+\inc{ch04_options}
+\inc{ch05_effects}
+\inc{ch06_results}
+\inc{ch07_examples}
+\inc{ch08_validation}
+\inc{ch09_limits}
+\inc{ch10_technical}
+\appendix
+\inc{app_translation}
+\bibliographystyle{plain}
+\begin{thebibliography}{99}
+\bibitem{butts2008} Butts, C.T. (2008). A relational event framework for social action. \emph{Sociological Methodology} 38(1), 155--200. \url{https://doi.org/10.1111/j.1467-9531.2008.00203.x}
+\bibitem{relevent} Butts, C.T. \emph{relevent: Relational Event Models}. R package (compared with version 1.2-1). \url{https://CRAN.R-project.org/package=relevent}
+\bibitem{cox1972} Cox, D.R. (1972). Regression models and life-tables. \emph{Journal of the Royal Statistical Society, Series B} 34(2), 187--220.
+\bibitem{michalski2020} Michalski, R. (2020). Manufacturing company email metadata and corporate hierarchy. Harvard Dataverse, V2. \url{https://doi.org/10.7910/DVN/6Z3CGX} (CC0 1.0).
+\bibitem{nurek2020} Nurek, M., Michalski, R. (2020). Combining machine learning and social network analysis to reveal the organizational structures. \emph{Applied Sciences} 10(5), 1699.
+\end{thebibliography}
+\end{document}

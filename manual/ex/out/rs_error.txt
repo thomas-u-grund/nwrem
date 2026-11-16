@@ -1,0 +1,6 @@
+. capture noisily nwrem mail, nodsnd nidrec riskset(samediv)
+nwrem: event 1 of the sorted event sequence is a dyad that is not in the risk
+set given by riskset().
+
+. display "return code: " _rc
+return code: 459

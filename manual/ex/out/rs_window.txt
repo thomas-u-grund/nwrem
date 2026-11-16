@@ -1,0 +1,52 @@
+. quietly use `ev', clear
+
+. quietly drop if t > 4 & (divs == "E85" | divr == "E85")
+
+. quietly drop if t < 3.6 & (divs == "E70" | divr == "E70")
+
+. count
+  569
+
+. nwbuild mailw
+
+. quietly nwload mailw, xvars
+
+. quietly gen actor = _nwnode
+
+. quietly gen long row = _n
+
+. quietly merge m:1 actor using `staff', keep(master match) nogenerate
+
+. quietly sort row
+
+. quietly gen double leave = 4 if division == "E85"
+
+. quietly gen double join = 3.6 if division == "E70"
+
+. nwrem mailw, nodsnd nidrec frpsndsnd
+------------------------------------------------------------
+Relational event model (ordinal partial likelihood, MLE)
+Network: mailw                         Actors: 144
+Events: 569                            Log likelihood: -5.17e+03
+------------------------------------------------------------
+------------------------------------------------------------------------------
+       mailw | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+      nodsnd |   13.30402   1.565793     8.50   0.000     10.23512    16.37292
+      nidrec |    15.8121   1.187604    13.31   0.000     13.48444    18.13976
+   frpsndsnd |   4.151412   .1507897    27.53   0.000     3.855869    4.446954
+------------------------------------------------------------------------------
+
+. nwrem mailw, nodsnd nidrec frpsndsnd entry(join) exit(leave)
+------------------------------------------------------------
+Relational event model (ordinal partial likelihood, MLE)
+Network: mailw                         Actors: 144
+Events: 569                            Log likelihood: -5.11e+03
+------------------------------------------------------------
+------------------------------------------------------------------------------
+       mailw | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+      nodsnd |   12.99724   1.560241     8.33   0.000     9.939225    16.05526
+      nidrec |   15.35007   1.185841    12.94   0.000     13.02587    17.67428
+   frpsndsnd |   4.113891   .1505241    27.33   0.000     3.818869    4.408912
+------------------------------------------------------------------------------

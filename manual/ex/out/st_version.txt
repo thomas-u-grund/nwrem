@@ -1,0 +1,7 @@
+. nwrem version
+nwrem version 1.4.0, 16nov2026
+  core package nwcommands : installed (development copy, no distribution date)
+  native plugin           : ~/Library/Application Support/Stata/ado/plus/r/rem_sim_macos.plugin
+> (ships with the package, no separate version number)
+  compared with           : R relevent 1.2-1
+  license                 : GNU GPL-3
