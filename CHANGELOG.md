@@ -15,7 +15,7 @@ project uses [Semantic Versioning](https://semver.org/).
 ### Added
 - New tests: `test_nwrem_plugin` (plugin against the Mata reference: every effect, every pair, random subsets, all 16,383 subsets of a small system, tied times, repeated dyads, valued `covevent()`, n = 2 and n = 3, extreme coefficients with the dense evaluator taking over, the Hessian against the numerical derivative of the reference gradient, the dependence check), `test_nwrem_noplugin` (r(601), r(3495), no frame left behind) and `test_nwrem_oldplugin` (a plugin with another protocol number is refused). `cscripts/run_tests.sh` sets a clean PLUS and runs the `xt_rem_*` tests as well. `test_nwrem_fast` now holds only the fits of the manufacturing e-mails.
 
-Tested on: TO BE FILLED
+Tested on macOS with Stata 17 BE, Stata 18 BE and StataNow 19.5 MP (the full test suite). Windows and Linux: not yet tested; the plugins are built by the build workflow.
 
 ## [1.2.0] - 2026-11-15
 
