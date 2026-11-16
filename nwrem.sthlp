@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.2.0  15nov2026 author: Thomas Grund}{...}
+{* *! version 1.3.0  16nov2026 author: Thomas Grund}{...}
 {marker topic}
 {helpb nwtopical##analysis_dynamicmodels:[NW-2.6.8] Dynamic & Event-Based Models}
 
@@ -61,9 +61,9 @@ receivers, most recent = rank 1; 0 if never sent to before){p_end}
 {synopt:{opt rrecsnd}}"recency of receipt": how RECENTLY (not how often) the sender previously received from this receiver affects the sending rate back to that receiver (1/rank among the sender's own
 past senders, most recent = rank 1; 0 if never received from before) - a recency-based reciprocity effect{p_end}
 {syntab:}
-{synopt:{opt seed(#)}}set the random-number seed before estimation; the optimizer starts from small random values near zero (and retries from
-other random values if a start fails), so the seed makes the fit reproducible; different seeds give the same MLE up to the convergence tolerance,
-except along the flat likelihood ridges described in the note on precision below; {it:#} is an integer between 0 and 2147483647{p_end}
+{synopt:{opt seed(#)}}set the random-number seed before estimation; the fit starts from zero and uses random starting values only when the Newton iteration
+does not reach a maximum (no maximum exists, or effects are not identified), so the seed makes such fits reproducible; different seeds give the same MLE up to the
+convergence tolerance, except along the flat likelihood ridges described in the note on precision below; {it:#} is an integer between 0 and 2147483647{p_end}
 {synopt:{opt level(#)}}confidence level of the displayed intervals; default {cmd:level(95)}{p_end}
 {synoptline}
 {p2colreset}{...}
@@ -104,37 +104,38 @@ put the actor who starts the event first. Events between two actors without a se
 events) are not modeled as such; {cmd:nwrem} treats the first actor as the sender.
 
 {pstd}
-{bf:Speed}: {cmd:nwrem} runs in Mata (there is no compiled plugin). It was timed against R's
+{bf:Speed}: {cmd:nwrem} evaluates the likelihood, its gradient and its Hessian in a compiled plugin and maximises the likelihood
+with Newton steps. It was timed against R's
 {cmd:relevent::rem.dyad()} 1.2-1 ({cmd:ordinal=TRUE}, maximum likelihood) on simulated event streams of 200 to
 20,000 events among 20 to 100 actors, with five effect sets: {bf:nodsnd nidrec}; {bf:nodsnd nidrec nidsnd nodrec};
 these four with {bf:frpsndsnd frrecsnd}; {bf:nodsnd nidrec rsndsnd rrecsnd}; and {bf:nodsnd nidrec} with
 {bf:covsnd covrec covint}. {cmd:nwrem} always computes the covariance matrix, so the like-for-like setting of
 {cmd:relevent} is {cmd:hessian=TRUE}; with {cmd:hessian=FALSE} (the default of {cmd:relevent}) it is 1.1 to 2.2
-times faster than that. Both settings were timed. {cmd:nwrem} 1.2.0 was run in Stata 17 on 15 November 2026, the
+times faster than that. Both settings were timed. {cmd:nwrem} 1.3.0 was run in Stata 17 on 16 November 2026, the
 times of {cmd:relevent} (R 4.6.0) are from 26 and 27 October 2026, both on the same Apple M5 Pro; every fit ran in
-its own process after an untimed warm-up fit; the ratios are ratios of medians (7 fits of {cmd:nwrem}, 5 in the largest cell;
-5, 3 or 1 fits of {cmd:relevent} in the cells where it needed more than a minute). The time of the first call in a
-Stata session is about 0.1 seconds longer, because the Mata library is loaded; it is not in the times.
+its own process after an untimed warm-up fit; the ratios are ratios of medians (7 fits of {cmd:nwrem};
+5, 3 or 1 fits of {cmd:relevent} in the cells where it needed more than a minute). The first call in a
+Stata session takes about 0.05 seconds longer, because the Mata library and the plugin are loaded; it is not in the times.
 
 {pstd}
 {cmd:nwrem} was faster than {cmd:relevent} in every cell in which both programs finished: the ratio of the time of
-{cmd:relevent} to the time of {cmd:nwrem} ranged from 3.3 to 213 with {cmd:hessian=TRUE} and from 2.1 to 96 with
-{cmd:hessian=FALSE}. By effect set (with the Hessian): 22 to 117 for the two degree effects, 17 to 88 for the four
-degree effects, 84 to 213 with the inertia effects added, 3.3 to 15 with the recency effects ({bf:rsndsnd rrecsnd}; the
-smallest ratios) and 20 to 105 with the covariate effects. {cmd:nwrem} needed 0.009 seconds for the two-effect model at
-200 events and 20 actors, 0.4 seconds at 5,000 events and 50 actors, and 3.7 seconds at 20,000 events and 100 actors;
-the largest fits were 20,000 events and 100 actors with the recency effects (97 seconds, median of 5 fits) and with the
-inertia effects (43 seconds). With 20,000 events {cmd:relevent} did not finish within 600 seconds with the Hessian
-for the four degree effects, the recency effects and the covariate effects (ratios above 98, 6.2 and 47);
+{cmd:relevent} to the time of {cmd:nwrem} ranged from 33 to 4,130 with {cmd:hessian=TRUE} and from 23 to 2,544 with
+{cmd:hessian=FALSE}. By effect set (with the Hessian): 33 to 2,511 for the two degree effects, 43 to 3,129 for the four
+degree effects, 616 to 1,856 with the inertia effects added, 50 to 249 with the recency effects ({bf:rsndsnd rrecsnd}; the
+smallest ratios) and 68 to 4,130 with the covariate effects. {cmd:nwrem} needed 0.006 seconds for the two-effect model at
+200 events and 20 actors, 0.02 seconds at 5,000 events and 50 actors, and 0.16 seconds at 20,000 events and 100 actors;
+the largest fits were 20,000 events and 100 actors with the inertia effects (12 seconds, median of 7 fits) and with the
+recency effects (7.8 seconds). With 20,000 events {cmd:relevent} did not finish within 600 seconds with the Hessian
+for the four degree effects, the recency effects and the covariate effects (ratios above 2,600, 77 and 1,700);
 without the Hessian it needed 575 seconds for the four degree effects and 588 seconds for the recency effects (ratios
-94 and 6.1) and again more than 600 seconds with the covariate effects. With the inertia effects {cmd:relevent}
-did not finish within 600 seconds at 5,000 events and 50 actors ({cmd:nwrem}: 3.9 seconds, ratio above 154) and was
-not run for the larger models. The peak memory of the Stata process was 0.2 GB with 200 events, 0.35 GB with 5,000 events
-and 50 actors and 0.6 GB with 20,000 events and 100 actors; the memory of {cmd:relevent} was not measured. The
+2,544 and 75) and again more than 600 seconds with the covariate effects. With the inertia effects {cmd:relevent}
+did not finish within 600 seconds at 5,000 events and 50 actors ({cmd:nwrem}: 0.7 seconds, ratio above 880) and was
+not run for the larger models. The peak memory of the Stata process was 0.21 GB with 200 events, 0.25 GB with 5,000 events
+and 50 actors and 0.29 GB with 20,000 events and 100 actors; the memory of {cmd:relevent} was not measured. The
 coefficients of the two programs agree to about three significant digits, not to six (largest absolute difference
-0.016, for coefficients of about 10 to 50; at most 0.007 standard errors of {cmd:relevent}); both stop at their own
-convergence tolerance. Timings depend on the machine, the data and the effects, and the times of
-{cmd:relevent} come from a different day than those of {cmd:nwrem}.
+0.005, for coefficients of about 10 to 50; at most 0.007 standard errors of {cmd:relevent}); {cmd:relevent} stops at its
+own convergence tolerance, {cmd:nwrem} at the maximum of the likelihood. Timings depend on the machine, the data and the
+effects, and the times of {cmd:relevent} come from a different day than those of {cmd:nwrem}.
 
 {pstd}
 {bf:Direction}: the model is always fitted for directed events, the first variable of {help nwset}
@@ -225,9 +226,23 @@ interpret standard errors accordingly and prefer larger event counts where possi
 
 
 {pstd}
+{marker native}{...}
+{pstd}
+Every fit runs in the compiled plugin of the package ({cmd:rem_sim}): the log likelihood, the gradient and the exact
+Hessian of all 14 effects are evaluated natively, and Mata maximises the likelihood with Newton-Raphson steps on them.
+There is no slower fallback. If the plugin file of your platform is not installed, {cmd:nwrem} stops with return code 601
+and says which file is missing; if the installed plugin is older than the {cmd:.ado} files (or cannot be loaded), it stops
+with return code 3495. Reinstall the package with {bf:net install nwrem, replace} (and restart Stata) in both cases.
+
+{pstd}
 If the Mata library of nwrem (lnwrem.mlib) does not load in your Stata (for example r(3499) because it was built by a newer Stata than yours), build it with your own Stata:
 {cmd:nwinstall, buildmata(nwrem)} fetches the Mata source, compiles it and installs the library; restart Stata afterwards.
 The build clears the data and the Mata objects in memory. See {help nwinstall##buildmata:nwinstall}.
+
+{pstd}
+The C source of the plugin comes with the package: {cmd:net get nwrem, from(https://raw.githubusercontent.com/thomas-u-grund/nwrem/main)}
+copies it into the current directory, together with a file that explains how to build the plugin; it is also in the folder
+{cmd:native/} of the repository at {browse "https://github.com/thomas-u-grund/nwrem"}. {cmd:net install} installs the compiled plugins only.
 
 
 {title:Examples}
@@ -315,7 +330,7 @@ regardless of how often (contrast with {cmd:frpsndsnd} above, which is about fre
 
 {pstd}
 {cmd:nwrem version} displays the installed release of {cmd:nwrem}, the version of the {cmd:nwcommands} core, the license and the version of the R package that the results were compared with. It stores
-the release in {cmd:r(version)} and {cmd:r(date)}, the core version in {cmd:r(core)}, the native plugin in {cmd:r(plugin)} (none: {cmd:nwrem} runs in Mata),
+the release in {cmd:r(version)} and {cmd:r(date)}, the core version in {cmd:r(core)}, the native plugin in use in {cmd:r(plugin)},
 the R package it was compared with in {cmd:r(reference)}, and the license in {cmd:r(license)}. After estimation, the release that produced the results is in
 {cmd:e(version)}; quote it when reporting an analysis. {cmd:nwversion} lists the core and all installed model packages.
 {p_end}
@@ -326,4 +341,4 @@ the R package it was compared with in {cmd:r(reference)}, and the license in {cm
 {p 4 14 2}Help: {help nwset}, {help nwattime}, {help nwergm}, {help nwsaom}{p_end}
 
 {hline}
-{pstd}{it:nwrem version 1.2.0, 15 November 2026}{p_end}{* nwversion}
+{pstd}{it:nwrem version 1.3.0, 16 November 2026}{p_end}{* nwversion}

@@ -3,6 +3,20 @@
 All notable changes to nwrem are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project uses [Semantic Versioning](https://semver.org/).
 
+## [1.3.0] - 2026-11-16
+
+### Changed
+- **Every fit runs in a native plugin.** The likelihood, its gradient and its exact Hessian are evaluated by the compiled plugin `rem_sim` (macOS, Linux, Windows; C source in `native/`, built by `.github/workflows/build-plugins.yml`). There is no Mata fall-back: when the plugin file of the platform is missing the command stops with r(601), when the installed plugin does not speak the protocol of this version (or cannot be loaded) with r(3495); both with a message. All 14 effects, `covevent()` networks (valued; missing or non-zero diagonal read as before), tied event times and repeated dyads are handled natively. The normaliser of an event costs O(n) plus the number of dyads that are in contact so far (or have a non-zero `covevent()` cell): the sparse dyadic terms (`frpsndsnd`, `frrecsnd`, `rsndsnd`, `rrecsnd`, `covevent()`) are kept as a list that is updated at the rows of the sender and the receiver after each event. When exp() overflows, a normaliser underflows or the sparse correction cancels more than six digits, the plugin evaluates that likelihood densely (O(n^2) per event) instead.
+- **Newton-Raphson on the exact Hessian.** The model is maximised with damped Newton steps on the plugin's gradient and Hessian (Mata's `optimize()` with a BFGS multi-start and Nelder-Mead stay as fall-backs when no maximum is reached). Coefficients and standard errors are those of the exact maximum and the exact observed information; values of earlier versions, which stopped where BFGS met its default tolerances with a numerical Hessian, differ in the fourth to fifth digit (for example nodsnd 10.6498 instead of 10.6488 at `t < 5`). `seed()` now matters only for the random starts of the fall-backs.
+- **Speed.** Measured on the manufacturing e-mails, `t < 14` (2,738 events, 129 actors), Apple M5 Pro, Stata 17 (version 1.2.0 before, 1.3.0 after): `nodsnd nidrec` 0.76 s, 0.03 s; plus `frpsndsnd` 4.6 s, 0.27 s; plus `rsndsnd` 9.9 s, 0.18 s; plus `covevent()` 1.4 s, 0.14 s; plus `frrecsnd rrecsnd` 9.5 s, 0.22 s. At 20,000 events and 100 actors: `nodsnd nidrec` 3.7 s, 0.16 s; plus `frpsndsnd` 25 s, 5.1 s; plus `rsndsnd` 46 s, 4.5 s; four degree plus `frpsndsnd frrecsnd` 46 s, 12 s; plus `covsnd covrec covint` 13 s, 0.33 s; plus a dense `covevent()` network (a third of the dyads) 6.8 s, 7.0 s (about as fast as before). The timings against R's `relevent` in `help nwrem` and `README.md` are those of this version.
+- **Mata evaluators are reference code.** The dense and the fast Mata evaluators of version 1.2.0, the dependence check and the unit-1 fit moved from `unw_rem.do` to `cscripts/ref_rem_mata.do`; the package's Mata library holds only the glue (event sorting, plugin lookup, the Newton loop, the collinearity check). The check for exactly dependent effects (version 1.2.0) is done by the plugin at theta = 0 and gives the same result.
+- `nwrem version` reports the plugin file in use in `r(plugin)`; the files of the plugin are listed in `nwrem.pkg`.
+
+### Added
+- New tests: `test_nwrem_plugin` (plugin against the Mata reference: every effect, every pair, random subsets, all 16,383 subsets of a small system, tied times, repeated dyads, valued `covevent()`, n = 2 and n = 3, extreme coefficients with the dense evaluator taking over, the Hessian against the numerical derivative of the reference gradient, the dependence check), `test_nwrem_noplugin` (r(601), r(3495), no frame left behind) and `test_nwrem_oldplugin` (a plugin with another protocol number is refused). `cscripts/run_tests.sh` sets a clean PLUS and runs the `xt_rem_*` tests as well. `test_nwrem_fast` now holds only the fits of the manufacturing e-mails.
+
+Tested on: TO BE FILLED
+
 ## [1.2.0] - 2026-11-15
 
 ### Changed

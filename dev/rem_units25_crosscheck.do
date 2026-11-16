@@ -27,6 +27,7 @@ adopath ++ `"`nwcore'"'
 adopath ++ `"`c(pwd)'"'
 quietly do `"`nwcore'/unw_core.do"'
 do unw_rem.do
+do cscripts/ref_rem_mata.do   // reference evaluators (RemFitUnit1, rem_loglik_multi, RemState)
 
 import delimited "dev/rem_units25_events.csv", clear varnames(1)
 

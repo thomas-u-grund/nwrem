@@ -1,4 +1,4 @@
-"""nwrem 1.2.0 in the design of bench/scripts/plan_rem.py (warm-up fit, own process per fit, seed = rep). nwrem only."""
+"""nwrem in the design of bench/scripts/plan_rem.py (warm-up fit, own process per fit, seed = rep). nwrem only."""
 import os, subprocess, time, csv, sys, resource
 # env: SCR (scratch folder with cc17 core and the nwrem tree), BENCH (core bench/ folder with scripts/ and data/rem/), WORK (output folder)
 SCR=os.environ["SCR"]
