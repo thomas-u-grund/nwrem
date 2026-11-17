@@ -5,8 +5,8 @@ This chapter lists every option of \nwrem{}. The effects are defined in Chapter~
 \section{Syntax}
 
 \begin{lstlisting}
-nwrem [netname], effects [likelihood options] [risk set options] [prior options] [seed(#) level(#)]
-nwrem [, level(#)]                          (replays the last fit)
+nwrem [netname], effects [likelihood options] [risk set options] [prior options] [seed(#) level(#) ci noci]
+nwrem [, level(#) ci noci]                        (replays the last fit)
 nwrem version
 \end{lstlisting}
 \emph{netname} is the event network to fit; the default is the current network. It must be an event network declared with \texttt{nwset ..., eventtime()}; any other network is refused with return code 198. At least one effect is required (return code 198); there is no default effect. The options can be given in any order.
@@ -91,7 +91,10 @@ The three prior options are refused without \opt{postmode} (return code 198). Th
 Option & Description\\
 \midrule\endhead
 \opt{seed(\#)} & Sets the random-number seed before the estimation; an integer from 0 to 2147483647 (anything else: return code 198). The fit starts from zero and uses random starting values only when the Newton iteration does not reach a maximum (no maximum exists, or effects are not identified), so the seed makes such fits reproducible. Different seeds give the same estimate up to the convergence tolerance.\\
-\opt{level(\#)} & Confidence level of the displayed intervals. Default 95. Also accepted by the replay form of the command.\\
+\opt{level(\#)} & Confidence level of the displayed intervals. Default 95. Given explicitly, it also shows the intervals (Section~\ref{sec:firstmodel}). Also accepted by the replay form of the command.\\
+\opt{ci} & Shows the confidence intervals even when \texttt{linesize} is smaller than 100; names that do not fit next to them are cut.\\
+\opt{noci} & Leaves the intervals out. \opt{ci} together with \opt{noci}: return code 198.\\
+The options \opt{nopvalues}, \opt{cformat()}, \opt{pformat()} and \opt{sformat()} of Stata's coefficient tables are passed through.\\
 \bottomrule
 \end{longtable}
 

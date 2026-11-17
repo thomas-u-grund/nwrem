@@ -4,13 +4,13 @@ Relational event model (ordinal partial likelihood, MLE)
 Network: mail                          Actors: 144
 Events: 631                            Log likelihood: -6.23e+03
 ------------------------------------------------------------
-------------------------------------------------------------------------------
-        mail | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
--------------+----------------------------------------------------------------
-covsnd_level |  -.2516265    .039796    -6.32   0.000    -.3296252   -.1736277
-covrec_level |  -.1969078   .0395808    -4.97   0.000    -.2744847   -.1193309
+-----------------------------------------------------
+        mail | Coefficient  Std. err.      z    P>|z|
+-------------+---------------------------------------
+covsnd_level |  -.2516265    .039796    -6.32   0.000
+covrec_level |  -.1969078   .0395808    -4.97   0.000
 covint_level |          0  (omitted)
-------------------------------------------------------------------------------
+-----------------------------------------------------
 Note: no usable standard error for covint_level.
       These effects are not identified: typically an effect is an exact function
       of others in the model (the total-degree share ntdegsnd is half the sum of

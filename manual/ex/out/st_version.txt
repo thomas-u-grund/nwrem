@@ -1,5 +1,5 @@
 . nwrem version
-nwrem version 1.4.0, 16nov2026
+nwrem version 1.5.0, 17nov2026
   core package nwcommands : installed (development copy, no distribution date)
   native plugin           : ~/Library/Application Support/Stata/ado/plus/r/rem_sim_macos.plugin
 > (ships with the package, no separate version number)

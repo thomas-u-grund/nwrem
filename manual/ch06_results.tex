@@ -50,7 +50,7 @@ In this example the model with both the activity effects and the history effects
 
 \section{Replaying, the confidence level and reproducibility}
 
-\texttt{nwrem} without arguments redisplays the last fit; \opt{level()} changes the confidence level of the displayed intervals without refitting.
+\texttt{nwrem} without arguments redisplays the last fit; \opt{level()} changes the confidence level of the displayed intervals without refitting (and shows them); \opt{ci} and \opt{noci} work in the replay as in the fit.
 \showlog{ml_replay}
 The fit is deterministic. It starts at zero and takes Newton steps; the random numbers are used only when the iteration fails to reach a maximum. Two fits with different seeds therefore give identical results:
 \showlogpart{ml_seed}{26}{38}
