@@ -3,10 +3,12 @@
 All notable changes to nwrem are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project uses [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.5.0] - 2026-11-17
 
 ### Changed
-- Coefficient tables show the coefficient names in full by default: the confidence intervals are left out, as with `noci`, at a `linesize` below 100 (where names of up to 32 characters do not fit next to them); before, long names were cut (e.g. `covevent_sa~p`). The new option `ci`, or `level(#)` given explicitly, shows the intervals as before. The display options of Stata's estimation commands (`noci`, `nopvalues`, `cformat()`, `pformat()`, `sformat()` and the others of `ereturn display`) are accepted in fits and in the replay (`nwrem` alone, `estimates replay`). Tables whose names all fit, and all output outside the coefficient tables, are unchanged.
+- **Coefficient tables show the names in full by default** (fit, replay and `estimates replay`): names of up to 32 characters are printed without cutting, and the interval columns are left out when `linesize` is below 100 (where a long name does not fit next to them). Before, long names were cut (for example `covsnd_...`). The option `ci` brings the intervals back (names are then cut as before); an explicit `level(#)` also shows them; `noci` is accepted and leaves them out; `ci` together with `noci` stops with r(198). `nopvalues`, `cformat()`, `pformat()` and `sformat()` are passed through to the table. The numbers are unchanged.
+
+Tested on macOS with Stata 17 BE, Stata 18 BE and StataNow 19.5 MP (the full test suite). Windows and Linux: not tested for this version; the compiled plugin is the one of 1.4.0.
 
 ## [1.4.0] - 2026-11-16
 
