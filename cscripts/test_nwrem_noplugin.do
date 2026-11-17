@@ -47,9 +47,12 @@ capture erase `"`sc'/`pname'"'
 foreach f in nwrem.ado _nwrem_libcheck.ado nwrem_version.ado {
 	quietly copy `"`root'/`f'"' `"`sc'/`f'"', replace
 }
-capture adopath - `"`root'/lib/plugins/macos"'
-capture adopath - `"`root'/lib/plugins/unix"'
-capture adopath - `"`root'/lib/plugins/windows"'
+* remove the plugin directories from the adopath whatever slash style Stata stores them in (backslashes on Windows)
+foreach __sub in macos unix windows {
+	foreach __sep in "/" "\" {
+		capture adopath - `"`root'`__sep'lib`__sep'plugins`__sep'`__sub'"'
+	}
+}
 capture adopath - `"`root'"'
 adopath ++ `"`sc'"'
 capture program drop nwrem
