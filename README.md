@@ -1,6 +1,6 @@
 # nwrem
 
-<!--version-->**Version 1.5.0** (released 17 November 2026)<!--/version-->
+<!--version-->**Version 1.5.1** (released 18 November 2026)<!--/version-->
 
 `nwrem` fits relational event models (REM) to a sequence of timed events between actors (who sends to whom, when), declared as an event-type temporal network with `nwset ..., eventtime()`. It estimates degree, inertia, recency, covariate, triadic and shared-partner effects, fixed effects and participation shifts, by the ordinal partial likelihood or the waiting-time (interval) likelihood, by maximum likelihood or posterior mode, optionally with restricted risk sets (dyads that cannot occur, actors that enter and leave). The likelihood, its gradient and its exact Hessian are evaluated in a native plugin; the results agree with the exact maximum of the R package relevent (1.2-1), computed from its own statistics, to at least five digits (the shared out-partner statistic `ospsnd` is the intended symmetric statistic, not the asymmetric one of relevent 1.2-1; see `help nwrem`).
 
@@ -20,7 +20,7 @@ own repository; it needs the core package nwcommands but no other model package.
 
 To install a specific version, point `from()` at the release tag (GitHub serves every tag under its own raw URL), for example version 1.0.8:
 
-       net install nwrem, from(https://raw.githubusercontent.com/thomas-u-grund/nwrem/v1.5.0/) replace
+       net install nwrem, from(https://raw.githubusercontent.com/thomas-u-grund/nwrem/v1.5.1/) replace
 
 `net describe nwrem` shows the version and distribution date, `nwrem version` the package, core and plugin versions, and `e(version)`
 holds the package version in the stored results. Release history: `CHANGELOG.md`; how releases are made: `RELEASING.md`.
