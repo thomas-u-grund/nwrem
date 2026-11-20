@@ -14,7 +14,7 @@ project uses [Semantic Versioning](https://semver.org/).
 - Tests `cscripts/test_nwrem_plots.do` (default names, name/saving/export, pass-through last, black titles, `title("")`, `noplot`, error paths, data untouched, old core -> r(199)) and `cscripts/test_nwrem_estat_oldplugin.do` (a plugin built without code 40: the fit works, estat stops with r(3495)).
 - Test `cscripts/test_nwrem_estat.do`: all quantities against an independent enumeration in Mata (every dyad, statistics recomputed from the history) for both likelihoods, with and without `condition()` and `riskset()`; graphs exported; error paths.
 
-Tested on macOS with Stata 17 BE (the plot test, the estat test and the old-plugin test, against core 3.29.0 and the plugin of the repository). Linux and Windows: the plugins were rebuilt by the CI workflow for this version; the two plugin tests were not confirmed on those systems at the time of release. Stata 18 on the Mac was not run for this version.
+Tested on macOS with Stata 17 BE (the plot test, the estat test and the old-plugin test, against core 3.29.0 and the plugin of the repository). Linux (Ubuntu 22.04) and Windows 11 with StataNow 19.5 MP: the plot test and the estat test pass with the plugins built by the CI workflow for this version (commit 6a36d3f). Stata 18 on the Mac was not run for this version.
 
 ## [1.5.1] - 2026-11-18
 
