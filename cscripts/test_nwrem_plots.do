@@ -57,7 +57,7 @@ foreach cmd in "estat rank" "estat rank, plot(hist)" "estat actors" "estat actor
 	confirm file `"`out'/s1.gph"'
 	confirm file `"`out'/s1.png"'
 	* replace is implied: the same call again
-	`cmd' name(gnm) saving(`"`out'/s1.gph"', replace) export(`"`out'/s1.png"', replace)
+	`cmd' name(gnm) saving(`"`out'/s1.gph"', replace) export(`"`out'/s1.png"')
 	di as text "  PASS: name(), saving(), export() of `cmd'"
 }
 
@@ -94,6 +94,26 @@ estat rank, name(bk) title("Mine", color(red))
 quietly graph describe bk
 assert strpos(`"`r(command)'"', "Rank diagnostic") == 0
 di as text "  PASS: black default titles, title(""), user title"
+
+* ---- estat actors: one role only (the book draws the sender panel), a short footnote that fits a 3.6 inch wide graph
+graph drop _all
+estat actors, role(sender) name(as1) export(`"`out'/as1.png"', width(1080)) xsize(3.6) ysize(2.2)
+estat actors, role(receiver) name(as2) xsize(3.6) ysize(2.2)
+estat actors, name(as3) xsize(3.6) ysize(2.2) export(`"`out'/as3.png"', width(1080))
+quietly graph describe as1
+assert strpos(`"`r(command)'"', "Expected events as receiver") == 0
+assert strpos(`"`r(command)'"', "Expected events as sender") > 0
+quietly graph describe as2
+assert strpos(`"`r(command)'"', "Expected events as sender") == 0
+quietly graph describe as3
+assert strlen(`"`r(command)'"') > 0
+confirm file `"`out'/as1.png"'
+confirm file `"`out'/as3.png"'
+* the footnote is one short line
+quietly graph describe as3
+assert strpos(`"`r(command)'"', "Dashed line: observed = expected.") > 0
+assert strpos(`"`r(command)'"', "Extension of nwrem") == 0
+di as text "  PASS: estat actors, role(sender|receiver), short footnote"
 
 * ---- noplot: the table only, no graph is drawn; options without a graph are errors
 graph drop _all

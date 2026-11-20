@@ -362,7 +362,7 @@ program _nwrem_estat_actors, rclass
 			_nw_gfinish title "Observed versus expected events by actor", gopts(`"`options'"')
 			local tt `r(t)'
 			graph combine `g1' `g2', rows(1) `tt' graphregion(color(white)) ///
-				note("Points on the dashed 45 degree line: the model reproduces the actor's activity. Extension of nwrem.") `nameopt' `options'
+				note("Dashed line: observed = expected.") `nameopt' `options'
 			capture graph drop `g1'
 			capture graph drop `g2'
 		}

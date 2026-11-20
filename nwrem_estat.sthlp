@@ -75,7 +75,7 @@ and the number expected under the model.
 {phang}{opt bins(#)} number of bins: histogram bins of {cmd:estat rank, plot(hist)} (default 10) or time bins of
 {cmd:estat time} (default 10; at most the number of events).
 
-{phang}{opt role(string)} {cmd:both} (default; two panels), {cmd:sender} or {cmd:receiver}.
+{phang}{opt role(string)} {cmd:both} (default; two panels), {cmd:sender} or {cmd:receiver} (one panel only, in the graph and in the picture; the table and {cmd:r()} always hold both roles).
 
 {phang}{opt labels} labels the points of {cmd:estat actors} with the actor names. {opt list} lists the table of all actors.
 
@@ -107,6 +107,7 @@ The graph needs the core package nwcommands, version 3.29.0 or later; with an ol
 
 	{cmd:. estat actors, labels}
 	{cmd:. estat time, bins(8)}
+	{cmd:. estat actors, role(sender) labels}
 
 {pstd}Name a graph, save it and export it as a picture, with a graph option:{p_end}
 
