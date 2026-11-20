@@ -26,7 +26,7 @@ program nwrem, eclass
 	syntax [anything(name=netname)] [, NODSND NIDREC NIDSND NODREC NTDEGSND NTDEGREC FRPSNDSND FRRECSND COVSND(varlist numeric) COVREC(varlist numeric) COVINT(varlist numeric) COVEVENT(string) RSNDSND RRECSND ///
 		OTPSND ITPSND OSPSND ISPSND FESND FEREC FEINT PSABBA PSABBY PSABXA PSABXB PSABXY PSABAY ///
 		INTerval STARTtime(string) ENDtime(string) CONDition(string) RISKset(string) ENTRY(varname numeric) EXIT(varname numeric) ///
-		POSTmode PRIORMean(string) PRIORScale(string) PRIORDf(string) SEED(string) *]
+		POSTmode PRIORMean(string) PRIORScale(string) PRIORDf(string) SEED(string) NWXDIAG(string) *]
 	// display options of the coefficient table (ci, level(), noci, nopvalues, cformat(), ...); any other option is
 	// refused here with Stata's usual message
 	local __tabopts `"`options'"'
@@ -312,6 +312,19 @@ program nwrem, eclass
 		error 198
 	}
 
+	// Hidden option nwxdiag(#): used by estat (nwrem_estat.ado) to re-run the data preparation of this fit and evaluate the
+	// diagnostics at the stored coefficients (matrix __nwrem_dgb) instead of fitting; # is the size of the top-k set. The results
+	// are left in the matrices __nwrem_dgdg, __nwrem_dgact and the scalars __nwrem_dgfinal, __nwrem_dgncond; e() is not touched.
+	if `"`nwxdiag'"' != "" {
+		local __nwrem_frame = c(frame)
+		capture noisily mata: RemDiag(`__nwrem_events', `nodes', (`__nwrem_active'), `__nwrem_CS', `__nwrem_CR', `__nwrem_CI', `__nwrem_covevmat', `__nwrem_mask', `__nwrem_entry', `__nwrem_exit', (`__nwrem_interval', `__nwrem_cond', `__nwrem_start', `__nwrem_end', 0, 0, 100, 4), st_matrix("__nwrem_dgb"), `nwxdiag', "__nwrem_dg")
+		local __nwrem_rc = _rc
+		if "`c(frame)'" != "`__nwrem_frame'" quietly frame change `__nwrem_frame'
+		capture frame drop __nwrem_native
+		capture mata: mata drop `__nwrem_events' `__nwrem_CS' `__nwrem_CR' `__nwrem_CI' `__nwrem_covevmat' `__nwrem_mask' `__nwrem_entry' `__nwrem_exit'
+		exit `__nwrem_rc'
+	}
+
 	// the fit runs in the compiled plugin (it writes the model into the frame __nwrem_native and leaves the current frame
 	// as it was); an error inside the fit must not leave that frame behind
 	local __nwrem_frame = c(frame)
@@ -348,6 +361,8 @@ program nwrem, eclass
 
 	ereturn post `b' `V', obs(`nevents')
 	ereturn local cmd "nwrem"
+	ereturn local cmdline `"nwrem `0'"'
+	ereturn local estat_cmd "nwrem_estat"
 	ereturn local version "1.5.1"
 	if `__nwrem_interval' local __nwrem_lik "waiting-time likelihood"
 	else local __nwrem_lik "ordinal partial likelihood"

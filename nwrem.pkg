@@ -9,7 +9,9 @@ d Distribution-Date: 18nov2026
 f nwrem.ado
 f _nwrem_libcheck.ado
 f nwrem_version.ado
+f nwrem_estat.ado
 f nwrem.sthlp
+f nwrem_estat.sthlp
 f lib/lnwrem.mlib
 f lib/plugins/macos/rem_sim_macos.plugin
 f lib/plugins/windows/rem_sim_windows.plugin

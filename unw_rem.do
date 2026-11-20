@@ -577,33 +577,17 @@ real colvector rem_event_dt(real matrix ev, real scalar start)
 }
 
 /*
-	RemFitX() -- fit of nwrem 1.4. eventmat = (sender, receiver, time) rows, n actors, active = 27 0/1 flags in the order of the
-	effects (nodsnd nidrec nidsnd nodrec ntdegsnd ntdegrec frpsndsnd frrecsnd covsnd covrec covint covevent rsndsnd rrecsnd
-	otpsnd itpsnd ospsnd ispsnd fesnd ferec feint psabba psabby psabxa psabxb psabxy psabay); CS, CR, CI = one covariate per
-	row (n columns; J(0, n, .) for none), CE = n x (n * networks) pairwise covariates; mask = n x n 0/1 matrix of the dyads in
-	the risk set (J(0, 0, .) = all), entry, exit = n x 1 times at which an actor enters and leaves the risk set (J(0, 1, .) =
-	always; a missing value = no limit); opts = (interval, conditioned events, start of the observation, end of the
-	observation (missing: the last event), posterior mode, prior mean, prior scale, prior degrees of freedom).
-	Results go to the Stata matrices pfx+"b", pfx+"V" (Pall columns) and the scalars pfx+"ll", pfx+"ll0" (the log likelihood
-	of the null model; missing when not defined), pfx+"df" (parameters in the model). Parameters that are exactly dependent on
-	others (see rem_nat_dependent_par()) get coefficient 0 and variance 0; the likelihood is that of the model without them.
+	rem_prep(): the checks and the preparation shared by the fit (RemFitX) and the diagnostics (RemDiag): sorted events, the
+	interval likelihood's time differences, the length of the final interval, the actor windows of entry() / exit(); events
+	outside the risk set stop with r(459). interval, ncond, start, endt are the options of the fit (endt is set when missing).
 */
-void RemFitX(real matrix eventmat, real scalar n, real rowvector active,
-		real matrix CS, real matrix CR, real matrix CI, real matrix CE, real matrix mask,
-		real colvector entry, real colvector exit, real rowvector opts, string scalar pfx)
+void rem_prep(real matrix eventmat, real scalar n, real rowvector active, real matrix mask, real colvector entry,
+		real colvector exit, real scalar interval, real scalar ncond, real scalar start, real scalar endt,
+		real matrix ev, real matrix win, real scalar dtc, real colvector tt)
 {
-	class RemNat scalar NT
-	real matrix ev, V, win, Vfull
-	real rowvector dropped, bfull, theta_hat
-	real colvector kp, tt, lo, hi, idx
-	real scalar nparams, nev, ok, ll, ll0, interval, ncond, start, endt, dtc, k, c, y0, ntot
-	real rowvector g0
-	real matrix H0
+	real scalar nev, k, c
+	real colvector lo, hi
 
-	interval = opts[1]
-	ncond = opts[2]
-	start = opts[3]
-	endt = opts[4]
 	if (sum(active) == 0) _error("nwrem: at least one effect must be selected.")
 	ev = rem_sorted_events(eventmat)
 	nev = rows(ev)
@@ -662,6 +646,38 @@ void RemFitX(real matrix eventmat, real scalar n, real rowvector active,
 			}
 		}
 	}
+}
+
+/*
+	RemFitX() -- fit of nwrem 1.4. eventmat = (sender, receiver, time) rows, n actors, active = 27 0/1 flags in the order of the
+	effects (nodsnd nidrec nidsnd nodrec ntdegsnd ntdegrec frpsndsnd frrecsnd covsnd covrec covint covevent rsndsnd rrecsnd
+	otpsnd itpsnd ospsnd ispsnd fesnd ferec feint psabba psabby psabxa psabxb psabxy psabay); CS, CR, CI = one covariate per
+	row (n columns; J(0, n, .) for none), CE = n x (n * networks) pairwise covariates; mask = n x n 0/1 matrix of the dyads in
+	the risk set (J(0, 0, .) = all), entry, exit = n x 1 times at which an actor enters and leaves the risk set (J(0, 1, .) =
+	always; a missing value = no limit); opts = (interval, conditioned events, start of the observation, end of the
+	observation (missing: the last event), posterior mode, prior mean, prior scale, prior degrees of freedom).
+	Results go to the Stata matrices pfx+"b", pfx+"V" (Pall columns) and the scalars pfx+"ll", pfx+"ll0" (the log likelihood
+	of the null model; missing when not defined), pfx+"df" (parameters in the model). Parameters that are exactly dependent on
+	others (see rem_nat_dependent_par()) get coefficient 0 and variance 0; the likelihood is that of the model without them.
+*/
+void RemFitX(real matrix eventmat, real scalar n, real rowvector active,
+		real matrix CS, real matrix CR, real matrix CI, real matrix CE, real matrix mask,
+		real colvector entry, real colvector exit, real rowvector opts, string scalar pfx)
+{
+	class RemNat scalar NT
+	real matrix ev, V, win, Vfull
+	real rowvector dropped, bfull, theta_hat
+	real colvector kp, tt, lo, hi, idx
+	real scalar nparams, nev, ok, ll, ll0, interval, ncond, start, endt, dtc, k, c, y0, ntot
+	real rowvector g0
+	real matrix H0
+
+	interval = opts[1]
+	ncond = opts[2]
+	start = opts[3]
+	endt = opts[4]
+	rem_prep(eventmat, n, active, mask, entry, exit, interval, ncond, start, endt, ev, win, dtc, tt)
+	nev = rows(ev)
 	NT = RemNat()
 	NT.open()
 	NT.setupx(ev, n, active, interval, ncond, dtc, CS, CR, CI, CE, mask, win)
@@ -720,6 +736,96 @@ void RemFitX(real matrix eventmat, real scalar n, real rowvector active,
 	st_numscalar(pfx + "ll", ll)
 	st_numscalar(pfx + "ll0", ll0)
 	st_numscalar(pfx + "df", nparams)
+}
+
+/*
+	RemDiag() -- diagnostics of a fitted model (nwrem's estat rank / actors / time). The arguments of RemFitX() (the model is
+	set up exactly as for the fit), the full coefficient vector b (1 x number of parameters of the full model; parameters
+	omitted as dependent have coefficient 0), topk = size of the top-k set of the hit measure. The plugin (code 40) evaluates the
+	linear predictor of every dyad of the risk set at every event. Results: matrix pfx+"dg" (one row per event in time order:
+	sender, receiver, time, number of dyads more likely than the observed one, number of tied dyads (the observed one
+	included), risk set size, log probability of the observed dyad, rate integral of the interval likelihood, probability mass
+	of the top-k dyads; missing for conditioned events), matrix pfx+"act" (one row per actor: expected number of events as
+	sender and as receiver, observed number as sender and as receiver; conditioned events are left out of all four), scalar
+	pfx+"final" (the rate integral of the final interval; 0 for the ordinal likelihood), pfx+"ncond", pfx+"ll".
+*/
+void RemDiag(real matrix eventmat, real scalar n, real rowvector active,
+		real matrix CS, real matrix CR, real matrix CI, real matrix CE, real matrix mask,
+		real colvector entry, real colvector exit, real rowvector opts, real rowvector b, real scalar topk, string scalar pfx)
+{
+	class RemNat scalar NT
+	real matrix ev, win, dg, act
+	real colvector tt, res, os, orr
+	real scalar nev, interval, ncond, start, endt, dtc, k, tot, rc, ll
+	string scalar argstr, frm
+	string rowvector vn
+
+	interval = opts[1]
+	ncond = opts[2]
+	start = opts[3]
+	endt = opts[4]
+	rem_prep(eventmat, n, active, mask, entry, exit, interval, ncond, start, endt, ev, win, dtc, tt)
+	nev = rows(ev)
+	NT = RemNat()
+	NT.open()
+	NT.setupx(ev, n, active, interval, ncond, dtc, CS, CR, CI, CE, mask, win)
+	if (cols(b) != NT.Pall) {
+		NT.close()
+		errprintf("{p 0 0 2}nwrem: the coefficient vector has %s elements but the model has %s parameters.{p_end}\n", strofreal(cols(b)), strofreal(NT.Pall))
+		exit(503)
+	}
+	// the diagnostics need a plugin that knows code 40 (code 98 reports it; older plugins stop with an error)
+	rc = _stata("plugin call remnative v1 v2, " + char(34) + "98 0 0 0 0 0 0" + char(34), 1)
+	if (rc != 0 | st_data(1, 2) < 1) {
+		NT.close()
+		errprintf("{p 0 0 2}nwrem: the installed plugin is too old for the diagnostics of estat (it has no code 40). Reinstall the package with {bf:net install nwrem, replace}.{p_end}\n")
+		exit(3495)
+	}
+	tot = 6 * (nev + 1) + 2 * n
+	if (tot + 1 > st_nobs()) st_addobs(tot + 1 - st_nobs())
+	argstr = "40 " + strofreal(NT.L, "%18.0f") + " " + strofreal(topk) + " " + strofreal(NT.Pall)
+	for (k = 1; k <= NT.Pall; k++) argstr = argstr + " " + strofreal(b[k], "%25.17g")
+	rc = _stata("plugin call remnative v1 v2, " + char(34) + argstr + char(34), 1)
+	if (rc != 0) {
+		NT.close()
+		exit(rc)
+	}
+	res = st_data((1::(1 + tot)), 2)
+	NT.close()
+	ll = res[1]
+	if (missing(ll)) {
+		errprintf("{p 0 0 2}nwrem: the linear predictor could not be evaluated at the estimated coefficients (overflow).{p_end}\n")
+		exit(430)
+	}
+	dg = rowshape(res[|2 \ 1 + 6 * nev|], nev)
+	dg = (ev[., 1], ev[., 2], tt, dg[., 1], dg[., 2], dg[., 3], dg[., 4], dg[., 5], dg[., 6])
+	act = (res[|2 + 6 * (nev + 1) \ 1 + 6 * (nev + 1) + n|], res[|2 + 6 * (nev + 1) + n \ 1 + 6 * (nev + 1) + 2 * n|])
+	os = J(n, 1, 0)
+	orr = J(n, 1, 0)
+	for (k = ncond + 1; k <= nev; k++) {
+		os[ev[k, 1]] = os[ev[k, 1]] + 1
+		orr[ev[k, 2]] = orr[ev[k, 2]] + 1
+	}
+	act = (act, os, orr)
+	// the results go into two frames (a Stata matrix is limited to 800 rows in Stata BE): pfx+"ev" one row per event, pfx+"act"
+	// one row per actor
+	frm = st_framecurrent()
+	stata("capture frame drop " + pfx + "ev")
+	stata("capture frame drop " + pfx + "act")
+	stata("frame create " + pfx + "ev")
+	st_framecurrent(pfx + "ev")
+	st_addobs(nev)
+	vn = ("sender", "receiver", "time", "ngreater", "ntied", "rsize", "logp", "rate", "topm")
+	for (k = 1; k <= 9; k++) st_store(., st_addvar("double", vn[k]), dg[., k])
+	stata("frame create " + pfx + "act")
+	st_framecurrent(pfx + "act")
+	st_addobs(n)
+	vn = ("expsnd", "exprec", "obssnd", "obsrec")
+	for (k = 1; k <= 4; k++) st_store(., st_addvar("double", vn[k]), act[., k])
+	st_framecurrent(frm)
+	st_numscalar(pfx + "final", interval ? res[1 + 6 * nev + 5] : 0)
+	st_numscalar(pfx + "ncond", ncond)
+	st_numscalar(pfx + "ll", ll)
 }
 
 /*

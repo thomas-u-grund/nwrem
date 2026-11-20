@@ -433,11 +433,23 @@ regardless of how often (contrast with {cmd:frpsndsnd} above, which is about fre
 {synopt:{bf:e(title)}}"Relational event model (" likelihood and estimator ")"{p_end}
 {synopt:{bf:e(lik)}}{bf:ordinal} or {bf:interval}{p_end}
 {synopt:{bf:e(depvar)}}name of the event network fit{p_end}
+{synopt:{bf:e(cmdline)}}the command as typed (used by {help nwrem_estat:estat} to set the model up again){p_end}
+{synopt:{bf:e(estat_cmd)}}{bf:nwrem_estat}{p_end}
 {synopt:{bf:e(unidentified)}}effects without a usable standard error (left out because they are exactly collinear with others: coefficient 0; or a standard error above 100); empty when all are identified{p_end}
 
 {p2col 5 20 24 2: Matrices}{p_end}
 {synopt:{bf:e(b)}}coefficient vector{p_end}
 {synopt:{bf:e(V)}}variance-covariance matrix (observed information){p_end}
+
+
+{marker estat}{...}
+{title:Postestimation: diagnostics and graphs}
+
+{pstd}
+{cmd:estat rank}, {cmd:estat actors} and {cmd:estat time} check the fit of the model: the rank of every observed
+event among all dyads of its risk set by the fitted linear predictor (with the share of top-{it:k} hits), observed versus
+expected events by sender and receiver, and observed versus expected counts over time, each with a graph. They are
+extensions of {cmd:nwrem}; {it:relevent} has no such methods. See {help nwrem_estat}.
 
 
 {title:Version}
@@ -456,7 +468,7 @@ the R package it was compared with in {cmd:r(reference)}, and the license in {cm
 
 {title:Also see}
 
-{p 4 14 2}Help: {help nwset}, {help nwattime}, {help nwergm}, {help nwsaom}{p_end}
+{p 4 14 2}Help: {help nwrem_estat}, {help nwset}, {help nwattime}, {help nwergm}, {help nwsaom}{p_end}
 
 {hline}
 {pstd}{it:nwrem version 1.5.1, 18 November 2026}{p_end}{* nwversion}

@@ -131,3 +131,13 @@ For a pair (a,b) with a earlier in the order of first appearance as sender, rele
 ## The plugin's evaluation at theta = 0 is used three times
 
 `rem_nat_dependent_par()` keeps the log likelihood, gradient and Hessian of the evaluation at theta = 0 (`RemNat.cy/cg/cH`); `RemFitX` uses them as `ll0` (ordinal) and `rem_newton()` as its first iterate when the start is 0 (the sub-block of the kept parameters, plus the prior's terms with `postmode`). If a change makes the first Newton step depend on anything else (a different start, a changed blob), clear `cached`.
+
+## estat after nwrem re-runs the fit's data preparation (no data are stored in e())
+
+`estat rank|actors|time` do not find the events, covariates or risk set in `e()`. `nwrem_estat.ado` re-runs the stored `e(cmdline)` with the hidden
+option `nwxdiag(k)`, which makes `nwrem.ado` do all its checks and data preparation and then call `RemDiag()` (plugin code 40) instead of `RemFitX()`;
+it leaves `e()` alone and exits before `ereturn post`. Results travel in the frames `__nwrem_dgev` / `__nwrem_dgact` (a Stata matrix is limited to
+800 rows in Stata BE) and are dropped by `_nwrem_diagclean`. Consequences: the network and covariates must be unchanged; `ereturn local estat_cmd` is
+what makes `estat` call `nwrem_estat` (without it: "estat rank not valid"); inside `frame x { ... }` blocks do not use `return`; do not name a Stata matrix
+and a returned scalar the same (`return scalar bins` was overwritten by `return matrix bins`); `args` splits `el(M, 1, 2)` into several tokens.
+Code 40 uses the dense evaluator (O(n^2) per event, the cost of ranking every dyad) and needs a plugin built from this source: code 98 reports it.

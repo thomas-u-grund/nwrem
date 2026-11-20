@@ -3,6 +3,14 @@
 All notable changes to nwrem are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- **Diagnostics with graphs after `nwrem`: `estat rank`, `estat actors`, `estat time`** (extensions of nwrem; R's relevent has no such methods; help `nwrem_estat`). `estat rank`: the rank of the observed sender-receiver pair among all dyads of the risk set by the fitted linear predictor, for every event (mid-ranks for ties); table with mean and median rank, mean percentile rank, the share of top-k hits (observed, expected under the model, and for a model without effects) and the mean log probability of the observed dyad; cumulative curve (default) or histogram of the percentile ranks. `estat actors`: observed versus expected number of events as sender and as receiver per actor (scatter with the 45 degree line, correlation and Pearson residual sums). `estat time`: observed versus expected over bins of consecutive events (waiting-time likelihood: events versus integrated rate; ordinal likelihood: top-k hits versus their expected number). Works with both likelihoods, `condition()`, `riskset()`, `entry()`/`exit()` and the fixed effects.
+- The evaluation runs in the native plugin (new code 40; the Mata part is `RemDiag()`); the protocol number is unchanged and an older plugin stops with r(3495). Linux and Windows plugins must be rebuilt from `native/rem_sim.c` before these subcommands work there.
+- `e(cmdline)` and `e(estat_cmd)`: `estat` sets the model up again from the stored command line, so the network and the covariate variables must be in memory as at the fit.
+- Test `cscripts/test_nwrem_estat.do`: all quantities against an independent enumeration in Mata (every dyad, statistics recomputed from the history) for both likelihoods, with and without `condition()` and `riskset()`; graphs exported; error paths.
+
 ## [1.5.1] - 2026-11-18
 
 ### Fixed

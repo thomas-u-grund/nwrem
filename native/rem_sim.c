@@ -22,7 +22,14 @@
 	  code 22  evaluate with the fast evaluator only; log likelihood missing when it gives up (tests)
 	  code 30  collinearity check: all parameters of the model (the drop mask of the blob is ignored), theta = 0, Hessian and
 	           uncentred second moments
-	  code 99  report the protocol number (row 1 of variable 2)
+	  code 40  diagnostics (nwrem's estat rank / actors / time): dense evaluation at theta; the argument "todo" is k, the size of
+           the top-k set of the hit measure. Result: row 1 = log likelihood; then 6 values per event (the last row set is the
+           final interval): strictly more likely dyads than the observed one, tied dyads (observed one included), risk set
+           size, log probability of the observed dyad, rate integral dt * sum of the rates (interval likelihood), probability
+           mass of the k most likely dyads; then n expected sender counts and n expected receiver counts (ordinal: summed
+           probabilities; interval: summed rate integrals). Conditioned events are missing.
+  code 98  report the diagnostics level (1 = code 40 exists); older plugins stop with "unknown algorithm code"
+  code 99  report the protocol number (row 1 of variable 2)
 	Result (variable 2): row 1 = log likelihood (missing when no evaluator gives a finite value), rows 2..P+1 = gradient,
 	then the P x P Hessian by rows (todo = 2), then P values E[X_p^2] summed over the events (used by code 30), then a flag
 	(0 = fast evaluator, 1 = dense evaluator) in the last row of the result block: row 2 + P + P*P + P.
@@ -422,6 +429,18 @@ static void excl_sum(const double *x, double *out, nwint n) {
    One evaluation. dense = 0: fast evaluator (returns 1 when it gives up), dense = 1: dense evaluator.
    needE2 = 1: the second moments are computed (Hessian, or the uncentred moments of the dependence check).
    ------------------------------------------------------------------ */
+/* diagnostics (code 40): per-event output buffer filled by the dense evaluator; NULL = off. Layout of DG_out: 6 doubles per event
+   (0..m, the last one is the final interval): strictly greater dyads, tied dyads (observed one included), risk set size,
+   log probability of the observed dyad, rate integral dt * sum of the rates (interval likelihood), probability mass of the DG_k
+   most likely dyads; then n expected sender counts, n expected receiver counts. DG_v, DG_w: n*n scratch. */
+static double *DG_out = NULL, *DG_v = NULL, *DG_w = NULL;
+static int DG_k = 1;
+
+static int cmp_desc(const void *x, const void *y) {
+	double a = *(const double *)x, b = *(const double *)y;
+	return (a < b) - (a > b);
+}
+
 static int run(const Spec *sp, const double *theta, int todo, int dense, int wantexx, double *ll, double *g, double *H, double *Exx) {
 	nwint n = sp->n, m = sp->m, i, j, k, c;
 	int P = sp->P, p, q, rc = 0, nFE = 0, needE2 = (todo >= 2 || wantexx), interval = (sp->mode == 1);
@@ -716,6 +735,7 @@ static int run(const Spec *sp, const double *theta, int todo, int dense, int wan
 					}
 				}
 				if (mx < -1e307) { rc = 2; goto done; }
+				if (DG_out) for (c = 0; c < n * n; c++) DG_v[c] = NAN;
 				for (j = 0; j < n; j++) {
 					if (!actS[j]) continue;
 					for (k = 0; k < n; k++) {
@@ -729,6 +749,7 @@ static int run(const Spec *sp, const double *theta, int todo, int dense, int wan
 						if (ps >= 0) v += st.row[j].sig[ps];
 						w = exp(v - mx);
 						Z += w;
+						if (DG_out) DG_v[j * n + k] = v;
 						if (todo >= 1 || needE2) {
 							for (p = 0; p < P; p++) {
 								double x = 0.0;
@@ -768,6 +789,33 @@ static int run(const Spec *sp, const double *theta, int todo, int dense, int wan
 					}
 				}
 				if (!(Z > 0.0) || !isfinite(Z)) { rc = 2; goto done; }
+				if (DG_out && counted) {
+					double *e6 = DG_out + 6 * (size_t)i, vobs = 0.0, tol = 0.0, f, topm = 0.0;
+					double *psn = DG_out + 6 * ((size_t)m + 1), *prc = psn + n;
+					nwint gg = 0, qq = 0, RR = 0, nk, kk2;
+					if (isev) { vobs = DG_v[s * n + r]; tol = 1e-10 * (1.0 + fabs(vobs)); }
+					for (j = 0; j < n; j++) for (k = 0; k < n; k++) {
+						double v = DG_v[j * n + k];
+						if (isnan(v)) continue;
+						DG_w[RR] = exp(v - mx);
+						RR++;
+						if (isev) { if (v > vobs + tol) gg++; else if (fabs(v - vobs) <= tol) qq++; }
+						f = interval ? dt * exp(v) : exp(v - mx) / Z;
+						if (!isfinite(f)) { rc = 2; goto done; }
+						psn[j] += f; prc[k] += f;
+					}
+					e6[0] = (double)gg; e6[1] = (double)qq; e6[2] = (double)RR;
+					e6[3] = isev ? vobs - (mx + log(Z)) : NAN;
+					e6[4] = interval ? dt * exp(mx) * Z : 0.0;
+					if (interval && !isfinite(e6[4])) { rc = 2; goto done; }
+					if (isev) {
+						qsort(DG_w, (size_t)RR, sizeof(double), cmp_desc);
+						nk = (nwint)DG_k < RR ? (nwint)DG_k : RR;
+						for (kk2 = 0; kk2 < nk; kk2++) topm += DG_w[kk2];
+						e6[5] = topm / Z;
+					}
+					else e6[5] = NAN;
+				}
 				for (p = 0; p < P; p++) Ea[p] /= Z;
 				if (needE2) for (p = 0; p < P; p++) for (q = p; q < P; q++) E2[(size_t)p * P + q] /= Z;
 				logZ = mx + log(Z);
@@ -901,7 +949,12 @@ STDLL stata_call(int argc, char *argv[]) {
 		SF_vstore(2, 1, (ST_double)REM_PROTOCOL);
 		return 0;
 	}
-	if (code != 20 && code != 21 && code != 22 && code != 30) {
+	if (code == 98) {      /* diagnostics level: 1 = code 40 (per-event ranks, expected counts) available */
+		free(argbuf);
+		SF_vstore(2, 1, 1.0);
+		return 0;
+	}
+	if (code != 20 && code != 21 && code != 22 && code != 30 && code != 40) {
 		free(argbuf);
 		SF_error("rem_sim: unknown algorithm code (plugin and package versions do not match)\n");
 		return 198;
@@ -935,6 +988,31 @@ STDLL stata_call(int argc, char *argv[]) {
 		todo = 2;
 	}
 	if (rc == 0 && sp.P != Pt) { SF_error("rem_sim: parameter count does not match the model\n"); rc = 198; }
+	if (rc == 0 && code == 40) {
+		/* diagnostics: dense evaluation at theta; todo carries k (the top-k of the hit measure) */
+		size_t nn = (size_t)sp.n * (size_t)sp.n, tot = 6 * ((size_t)sp.m + 1) + 2 * (size_t)sp.n, q;
+		double *res;
+		DG_k = todo < 1 ? 1 : todo;
+		DG_out = (double *)calloc(tot, sizeof(double));
+		DG_v = (double *)malloc(nn * sizeof(double));
+		DG_w = (double *)malloc(nn * sizeof(double));
+		if (!DG_out || !DG_v || !DG_w) rc = 909;
+		else {
+			for (q = 0; q < 6 * ((size_t)sp.m + 1); q++) DG_out[q] = NAN;
+			rc = run(&sp, theta, 0, 1, 0, &ll, g, H, Exx);
+			if (rc == 0) {
+				res = DG_out;
+				SF_vstore(2, 1, ll);
+				for (q = 0; q < tot; q++) SF_vstore(2, (ST_int)(2 + q), isnan(res[q]) ? SV_missval : res[q]);
+			}
+			else if (rc == 1 || rc == 2) { SF_vstore(2, 1, SV_missval); rc = 0; }
+		}
+		free(DG_out); free(DG_v); free(DG_w);
+		DG_out = NULL; DG_v = NULL; DG_w = NULL;
+		free(sp.blob); free(sp.pall); free(sp.par);
+		free(theta); free(g); free(H); free(Exx);
+		return rc;
+	}
 	if (rc == 0) {
 		int wantexx = (code == 30);
 		if (code == 21) { usedense = 1; rc = run(&sp, theta, todo, 1, wantexx, &ll, g, H, Exx); }
