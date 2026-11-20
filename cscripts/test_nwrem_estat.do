@@ -116,7 +116,7 @@ foreach rsopt in "" "riskset(rs)" {
 		mata: REFOUT = REF_diag(EVT, 5, BB, XC, `cond', ("`lik'" == "interval"), 0, 45, 5, MKM, REFACT, REFFIN)
 	mata: st_local("nc", strofreal(sum(REFOUT[., 4] :< .)))
 	* ---- estat rank
-	estat rank, topk(5) nograph
+	estat rank, topk(5) noplot
 	local kk = 5
 	mata: _r = select(REFOUT, REFOUT[., 4] :< .)
 	mata: _mid = _r[., 4] :+ (_r[., 5] :+ 1) :/ 2
@@ -132,6 +132,12 @@ foreach rsopt in "" "riskset(rs)" {
 	chk "hit" r(hit) scalar(__ref)
 	mata: st_numscalar("__ref", mean(_r[., 7]))
 	chk "mean logp" r(mean_logp) scalar(__ref)
+	* ordinal likelihood without conditioning: the log probabilities of the observed dyads add up to the log likelihood of the fit
+	* (which test_nwrem_relevent14 checks against R's relevent)
+	if "`lik'" == "ordinal" & `cond' == 0 {
+		scalar __llsum = r(mean_logp) * r(N)
+		chk "sum logp = e(ll)" scalar(__llsum) e(ll) 1e-8
+	}
 	mata: st_numscalar("__ref", mean(-ln(_r[., 6])))
 	chk "null logp" r(mean_logp_null) scalar(__ref)
 	mata: st_numscalar("__ref", mean(rowmin((J(rows(_r), 1, 5), _r[., 6])) :/ _r[., 6]))
@@ -140,13 +146,13 @@ foreach rsopt in "" "riskset(rs)" {
 	mata: st_numscalar("__ref", rows(_s) / 2 == floor(rows(_s) / 2) ? (_s[rows(_s) / 2] + _s[rows(_s) / 2 + 1]) / 2 : _s[(rows(_s) + 1) / 2])
 	chk "median" r(median_rank) scalar(__ref)
 	* ---- estat actors
-	estat actors, nograph
+	estat actors, noplot
 	matrix A = r(actors)
 	mata: st_matrix("__refA", REFACT[., (3, 1, 4, 2)])
 	* the matrix is ordered obs_sender exp_sender obs_receiver exp_receiver
 	assert mreldif(A, __refA) < 1e-9
 	* ---- estat time
-	estat time, bins(4) topk(5) nograph
+	estat time, bins(4) topk(5) noplot
 	matrix TB = r(bins)
 	mata: _nn = rows(_r)
 	mata: _bin = ceil((1::_nn) :* 4 :/ _nn)
@@ -168,9 +174,9 @@ foreach rsopt in "" "riskset(rs)" {
 
 * ---- the fixed effect case (dense in the plugin) and a covariate network: only that the numbers are finite and consistent
 quietly nwrem tiny, nodsnd nidrec fesnd
-estat rank, nograph
+estat rank, noplot
 assert r(N) == 22 & r(mean_rank) > 0
-estat actors, nograph
+estat actors, noplot
 * expected counts add up to the number of events (ordinal likelihood)
 matrix A = r(actors)
 mata: st_numscalar("__s", sum(st_matrix("A")[., 2]))
@@ -193,14 +199,14 @@ foreach cmd in "estat rank, plot(cdf)" "estat rank, plot(hist) bins(6)" "estat a
 }
 quietly nwrem tiny, nodsnd nidrec interval starttime(0) endtime(45)
 estat time
-graph describe Graph
+graph describe time
 di as text "  PASS: graph of estat time after interval"
 
 * ---- e() untouched, no leftovers
 quietly nwrem tiny, nodsnd nidrec covsnd(xc)
 tempname b0
 matrix `b0' = e(b)
-estat rank, nograph
+estat rank, noplot
 assert "`e(cmd)'" == "nwrem"
 assert mreldif(e(b), `b0') == 0
 
@@ -231,7 +237,7 @@ capture estat nonsense
 assert _rc != 0
 * the network is gone
 nwclear
-capture estat rank, nograph
+capture estat rank, noplot
 assert _rc != 0
 di as text "  PASS: error paths (198 for bad options, an error when the network is gone)"
 ereturn clear

@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.5.1  18nov2026 author: Thomas Grund}{...}
+{* *! version 1.6.0  20nov2026 author: Thomas Grund}{...}
 {helpb nwtopical##analysis_dynamicmodels:[NW-2.6.8] Dynamic & Event-Based Models}
 
 {title:Title}
@@ -12,13 +12,16 @@
 {title:Syntax}
 
 {p 8 17 2}
-{cmd:estat} {cmdab:rank} [{cmd:,} {opt topk(#)} {opt plot(cdf|hist)} {opt bins(#)} {opt nog:raph} {it:twoway_options}]
+{cmd:estat} {cmdab:rank} [{cmd:,} {opt topk(#)} {opt plot(cdf|hist)} {opt bins(#)} {opt nop:lot}
+{opt name(name)} {opt sav:ing(filename)} {opt exp:ort(filename [, graph_export_options])} {it:twoway_options}]
 
 {p 8 17 2}
-{cmd:estat} {cmdab:actors} [{cmd:,} {opt role(both|sender|receiver)} {opt lab:els} {opt lis:t} {opt nog:raph} {it:graph_options}]
+{cmd:estat} {cmdab:actors} [{cmd:,} {opt role(both|sender|receiver)} {opt lab:els} {opt lis:t} {opt noe:qual} {opt nop:lot}
+{opt name(name)} {opt sav:ing(filename)} {opt exp:ort(filename [, graph_export_options])} {it:graph_options}]
 
 {p 8 17 2}
-{cmd:estat} {cmdab:time} [{cmd:,} {opt bins(#)} {opt topk(#)} {opt nog:raph} {it:twoway_options}]
+{cmd:estat} {cmdab:time} [{cmd:,} {opt bins(#)} {opt topk(#)} {opt nop:lot}
+{opt name(name)} {opt sav:ing(filename)} {opt exp:ort(filename [, graph_export_options])} {it:twoway_options}]
 
 
 {title:Description}
@@ -76,9 +79,20 @@ and the number expected under the model.
 
 {phang}{opt labels} labels the points of {cmd:estat actors} with the actor names. {opt list} lists the table of all actors.
 
-{phang}{opt nograph} shows the table only.
+{phang}{opt noequal} ({cmd:estat actors}) lets the two axes of a panel have different ranges; by default both run from 0 to the same maximum and the panel is square, so that the 45 degree line is the diagonal.
 
-{phang}{it:twoway_options} are passed to the graph, for example {opt name()}, {opt saving()} or {opt scheme()}.
+{phang}{opt noplot} shows the table only. {opt name()}, {opt saving()}, {opt export()} and graph options need the graph and are errors with {opt noplot}.
+
+{phang}{opt name(name)} names the graph in memory. The default names are {cmd:rank}, {cmd:actors} and {cmd:time}; an existing graph of that name is replaced. A trailing {cmd:, replace} is accepted and ignored.
+
+{phang}{opt saving(filename)} saves the graph as a {cmd:.gph} file (extension added; an existing file is replaced).
+
+{phang}{opt export(filename [, graph_export_options])} exports the graph with {cmd:graph export}; the extension sets the format ({cmd:.png}, {cmd:.pdf}, {cmd:.svg} ...), an existing file is replaced, and options such as {opt width()} are those of {helpb graph export}.
+
+{phang}{it:twoway_options} are all other options. They go to {cmd:twoway} ({cmd:histogram} for {cmd:plot(hist)}; {cmd:graph combine} for the two panels of {cmd:estat actors}), appended last, so they override the defaults, for example {opt scheme()}, {opt title()} or {opt xlabel()}. The default titles are black; {cmd:title("")} removes the title.
+
+{pstd}
+The graph needs the core package nwcommands, version 3.29.0 or later; with an older core the graph stops with r(199) and a message ({opt noplot} works with any core).
 
 
 {title:Examples}
@@ -93,6 +107,10 @@ and the number expected under the model.
 
 	{cmd:. estat actors, labels}
 	{cmd:. estat time, bins(8)}
+
+{pstd}Name a graph, save it and export it as a picture, with a graph option:{p_end}
+
+	{cmd:. estat rank, name(rk) saving(rank) export(rank.png, width(1200)) scheme(s2color)}
 
 
 {title:Stored results}
@@ -122,4 +140,4 @@ columns {cmd:events}, {cmd:time_from}, {cmd:time_to}, {cmd:observed}, {cmd:expec
 {p 4 14 2}Help: {help nwrem}{p_end}
 
 {hline}
-{pstd}{it:nwrem version 1.5.1, 18 November 2026}{p_end}{* nwversion}
+{pstd}{it:nwrem version 1.6.0, 20 November 2026}{p_end}{* nwversion}

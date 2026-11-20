@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.5.1  18nov2026 author: Thomas Grund}{...}
+{* *! version 1.6.0  20nov2026 author: Thomas Grund}{...}
 {marker topic}
 {helpb nwtopical##analysis_dynamicmodels:[NW-2.6.8] Dynamic & Event-Based Models}
 
@@ -449,7 +449,7 @@ regardless of how often (contrast with {cmd:frpsndsnd} above, which is about fre
 {cmd:estat rank}, {cmd:estat actors} and {cmd:estat time} check the fit of the model: the rank of every observed
 event among all dyads of its risk set by the fitted linear predictor (with the share of top-{it:k} hits), observed versus
 expected events by sender and receiver, and observed versus expected counts over time, each with a graph. They are
-extensions of {cmd:nwrem}; {it:relevent} has no such methods. See {help nwrem_estat}.
+extensions of {cmd:nwrem}; {it:relevent} has no such methods. The graphs are drawn by default ({opt noplot} gives the table only) and take {opt name()}, {opt saving()}, {opt export()} and all {cmd:twoway} options. See {help nwrem_estat}.
 
 
 {title:Version}
@@ -471,4 +471,4 @@ the R package it was compared with in {cmd:r(reference)}, and the license in {cm
 {p 4 14 2}Help: {help nwrem_estat}, {help nwset}, {help nwattime}, {help nwergm}, {help nwsaom}{p_end}
 
 {hline}
-{pstd}{it:nwrem version 1.5.1, 18 November 2026}{p_end}{* nwversion}
+{pstd}{it:nwrem version 1.6.0, 20 November 2026}{p_end}{* nwversion}

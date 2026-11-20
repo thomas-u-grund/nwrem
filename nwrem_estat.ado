@@ -1,4 +1,4 @@
-*! version 1.5.1  18nov2026 nwrem_estat
+*! version 1.6.0  20nov2026 nwrem_estat
 * Copyright (C) 2026 Thomas U. Grund
 * This file is part of nwrem, a Stata package derived from the R package 'relevent' (Carter T. Butts; GPL (>= 2)).
 * nwrem is free software: you can redistribute it and/or modify it under the terms of the GNU General
@@ -31,6 +31,32 @@ program nwrem_estat, rclass
 		exit 321
 	}
 	return add
+end
+
+* the graph options of the three subcommands: the shared core helper _nw_gfinish (core 3.29.0 or later) validates name(), saving(),
+* export() and the pass-through options; it is looked for at plot time only (the tables need no helper)
+capture program drop _nwrem_gcheck
+program _nwrem_gcheck, rclass
+	syntax , DEFault(string) CMD(string) [NOPlot NAME(string asis) SAVing(string asis) EXPort(string asis) GOPTS(string asis)]
+	if strpos(`"`gopts'"', char(96) + char(34)) == 1 gettoken gopts : gopts
+	if "`noplot'" != "" & `"`name'`saving'`export'`gopts'"' == "" {
+		return scalar draw = 0
+		exit
+	}
+	capture _nw_gfinish version
+	local rc = _rc
+	local api = r(api)
+	if `rc' | missing(`api') | `api' < 1 {
+		di as err `"{p 0 0 2}`cmd': the graph needs nwcommands (core) version 3.29.0 or later; the installed core is older. Update it with {bf:ado update nwcommands, update} or {bf:nwinstall}, or use {bf:noplot}.{p_end}"'
+		exit 199
+	}
+	local plotarg = cond("`noplot'" == "", "plot", "")
+	_nw_gfinish check, plot(`plotarg') name(`name') saving(`saving') export(`export') gopts(`"`gopts'"') default(`default') cmd(`cmd')
+	return scalar draw = r(draw)
+	return local name `"`r(name)'"'
+	return local nameopt `"`r(nameopt)'"'
+	return local saving `"`r(saving)'"'
+	return local export `"`r(export)'"'
 end
 
 * evaluates the diagnostics: frames __nwrem_dgev (one row per event in time order) and __nwrem_dgact (one row per actor)
@@ -86,7 +112,7 @@ end
 * estat rank: the rank of the observed dyad among all dyads of the risk set by the fitted linear predictor
 capture program drop _nwrem_estat_rank
 program _nwrem_estat_rank, rclass
-	syntax [, TOPk(string) PLOT(string) BINs(integer 10) NOGraph *]
+	syntax [, TOPk(string) PLOT(string) BINs(integer 10) NOPlot NAME(string asis) SAVing(string asis) EXPort(string asis) *]
 	local k = 10
 	if `"`topk'"' != "" _nwrem_diagtopk k `"`topk'"'
 	if `"`plot'"' == "" local plot "cdf"
@@ -98,6 +124,12 @@ program _nwrem_estat_rank, rclass
 		di as error "bins() must be an integer between 2 and 1000"
 		exit 198
 	}
+	_nwrem_gcheck, default(rank) cmd(estat rank) `noplot' name(`name') saving(`saving') export(`export') gopts(`"`options'"')
+	local draw = r(draw)
+	local nameopt `"`r(nameopt)'"'
+	local gname `"`r(name)'"'
+	local gsv `"`r(saving)'"'
+	local gex `"`r(export)'"'
 	_nwrem_diagrun `k'
 	tempname N meanrank medrank meanpct hit hitm hitr mlp nlp meanR
 	frame __nwrem_dgev {
@@ -164,8 +196,14 @@ program _nwrem_estat_rank, rclass
 	return scalar mean_logp = `mlp'
 	return scalar mean_logp_null = `nlp'
 	return scalar mean_risksize = `meanR'
-	if "`nograph'" == "" {
+	if `draw' {
+		_nw_gfinish blk "Percentile rank of the observed dyad (rank / risk set size)", kind(xtitle) gopts(`"`options'"')
+		local xt `r(t)'
 		if "`plot'" == "cdf" {
+			_nw_gfinish title "Rank diagnostic: cumulative distribution", gopts(`"`options'"')
+			local tt `r(t)'
+			_nw_gfinish blk "Share of events at or below", kind(ytitle) gopts(`"`options'"')
+			local yt `r(t)'
 			frame __nwrem_dgev {
 				quietly {
 					keep if !missing(__pct)
@@ -179,28 +217,27 @@ program _nwrem_estat_rank, rclass
 				}
 				twoway (line __cum __pct, connect(J) lcolor(navy) lwidth(medthick)) ///
 					(function y = x, range(0 1) lpattern(dash) lcolor(gs8)), ///
-					xtitle("Percentile rank of the observed dyad (rank / risk set size)") ///
-					ytitle("Share of events at or below") ///
+					`xt' `yt' `tt' graphregion(color(white)) ///
 					legend(order(1 "fitted model" 2 "no effects (uniform)") rows(1) position(6)) ///
-					title("Rank diagnostic: cumulative distribution") ///
 					note("Curve above the diagonal: the observed dyad ranks better than chance. Extension of nwrem.") ///
-					xlabel(0(.2)1) ylabel(0(.2)1) aspectratio(1) `options'
+					xlabel(0(.2)1) ylabel(0(.2)1) aspectratio(1) `nameopt' `options'
 			}
 		}
 		else {
+			_nw_gfinish title "Rank diagnostic: distribution of ranks", gopts(`"`options'"')
+			local tt `r(t)'
+			_nw_gfinish blk "Density", kind(ytitle) gopts(`"`options'"')
+			local yt `r(t)'
 			frame __nwrem_dgev {
 				quietly keep if !missing(__pct)
 				histogram __pct, bin(`bins') density start(0) lcolor(white) fcolor(navy%70) ///
 					addplot(function y = 1, range(0 1) lpattern(dash) lcolor(gs6)) ///
-					xtitle("Percentile rank of the observed dyad (rank / risk set size)") ytitle("Density") ///
+					`xt' `yt' `tt' graphregion(color(white)) ///
 					legend(order(1 "events" 2 "no effects (uniform)") rows(1) position(6)) ///
-					title("Rank diagnostic: distribution of ranks") ///
-					note("Mass near 0 = the observed dyad ranks high. Extension of nwrem.") `options'
+					note("Mass near 0 = the observed dyad ranks high. Extension of nwrem.") `nameopt' `options'
 			}
 		}
-	}
-	else if `"`options'"' != "" {
-		* graph options without a graph are still checked: none to check (they are passed to twoway only)
+		_nw_gfinish save, name(`gname') saving(`"`gsv'"') export(`"`gex'"')
 	}
 	_nwrem_diagclean
 end
@@ -209,12 +246,18 @@ end
 * estat actors: observed versus expected number of events as sender and as receiver, by actor
 capture program drop _nwrem_estat_actors
 program _nwrem_estat_actors, rclass
-	syntax [, ROLE(string) LABels LISt NOGraph *]
+	syntax [, ROLE(string) LABels LISt NOEqual NOPlot NAME(string asis) SAVing(string asis) EXPort(string asis) *]
 	if `"`role'"' == "" local role "both"
 	if !inlist(`"`role'"', "both", "sender", "receiver") {
 		di as error "role() must be sender, receiver or both"
 		exit 198
 	}
+	_nwrem_gcheck, default(actors) cmd(estat actors) `noplot' name(`name') saving(`saving') export(`export') gopts(`"`options'"')
+	local draw = r(draw)
+	local nameopt `"`r(nameopt)'"'
+	local gname `"`r(name)'"'
+	local gsv `"`r(saving)'"'
+	local gex `"`r(export)'"'
 	_nwrem_diagrun 1
 	local netname "`e(depvar)'"
 	_nwsyntax `netname', max(1)
@@ -266,43 +309,64 @@ program _nwrem_estat_actors, rclass
 	}
 	matrix colnames `M' = obs_sender exp_sender obs_receiver exp_receiver
 	return matrix actors = `M'
-	if "`nograph'" == "" {
+	if `draw' {
 		local mlab ""
 		if "`labels'" != "" local mlab "mlabel(actor) mlabsize(vsmall) mlabposition(1)"
-		local ng = ("`role'" == "both") + 1
 		tempname g1 g2
+		* with both roles the two panels are drawn without display and combined; with one role the panel carries the name
+		local nm1 `"`nameopt'"'
+		local nm2 `"`nameopt'"'
+		local pass `"`options'"'
+		if "`role'" == "both" {
+			local nm1 "nodraw name(`g1', replace)"
+			local nm2 "nodraw name(`g2', replace)"
+			local pass ""
+		}
+		_nw_gfinish blk "Expected events as sender", kind(xtitle) gopts(`"`pass'"')
+		local xt1 `r(t)'
+		_nw_gfinish blk "Observed events as sender", kind(ytitle) gopts(`"`pass'"')
+		local yt1 `r(t)'
+		_nw_gfinish blk "Expected events as receiver", kind(xtitle) gopts(`"`pass'"')
+		local xt2 `r(t)'
+		_nw_gfinish blk "Observed events as receiver", kind(ytitle) gopts(`"`pass'"')
+		local yt2 `r(t)'
+		_nw_gfinish title "Sender activity", gopts(`"`pass'"')
+		local tt1 `r(t)'
+		_nw_gfinish title "Receiver activity", gopts(`"`pass'"')
+		local tt2 `r(t)'
 		frame __nwrem_dgact {
 			if inlist("`role'", "both", "sender") {
 				quietly summarize obssnd
 				local mx1 = r(max)
 				quietly summarize expsnd
 				local mx1 = max(`mx1', r(max))
+				local eq1 ""
+				if "`noequal'" == "" local eq1 "xscale(range(0 `mx1')) yscale(range(0 `mx1')) aspectratio(1)"
 				twoway (scatter obssnd expsnd, msymbol(Oh) mcolor(navy) `mlab') ///
 					(function y = x, range(0 `mx1') lpattern(dash) lcolor(gs8)), ///
-					xtitle("Expected events as sender") ytitle("Observed events as sender") ///
-					title("Sender activity") legend(off) aspectratio(1) ///
-					nodraw name(`g1', replace)
+					`xt1' `yt1' `tt1' legend(off) graphregion(color(white)) `eq1' `nm1' `pass'
 			}
 			if inlist("`role'", "both", "receiver") {
 				quietly summarize obsrec
 				local mx2 = r(max)
 				quietly summarize exprec
 				local mx2 = max(`mx2', r(max))
+				local eq2 ""
+				if "`noequal'" == "" local eq2 "xscale(range(0 `mx2')) yscale(range(0 `mx2')) aspectratio(1)"
 				twoway (scatter obsrec exprec, msymbol(Oh) mcolor(maroon) `mlab') ///
 					(function y = x, range(0 `mx2') lpattern(dash) lcolor(gs8)), ///
-					xtitle("Expected events as receiver") ytitle("Observed events as receiver") ///
-					title("Receiver activity") legend(off) aspectratio(1) ///
-					nodraw name(`g2', replace)
+					`xt2' `yt2' `tt2' legend(off) graphregion(color(white)) `eq2' `nm2' `pass'
 			}
 		}
 		if "`role'" == "both" {
-			graph combine `g1' `g2', rows(1) title("Observed versus expected events by actor") ///
-				note("Points on the dashed 45 degree line: the model reproduces the actor's activity. Extension of nwrem.") `options'
+			_nw_gfinish title "Observed versus expected events by actor", gopts(`"`options'"')
+			local tt `r(t)'
+			graph combine `g1' `g2', rows(1) `tt' graphregion(color(white)) ///
+				note("Points on the dashed 45 degree line: the model reproduces the actor's activity. Extension of nwrem.") `nameopt' `options'
+			capture graph drop `g1'
+			capture graph drop `g2'
 		}
-		else if "`role'" == "sender" graph display `g1', `options'
-		else graph display `g2', `options'
-		capture graph drop `g1'
-		capture graph drop `g2'
+		_nw_gfinish save, name(`gname') saving(`"`gsv'"') export(`"`gex'"')
 	}
 	_nwrem_diagclean
 end
@@ -311,13 +375,19 @@ end
 * estat time: observed versus expected over the time of the event sequence, in bins of equally many events
 capture program drop _nwrem_estat_time
 program _nwrem_estat_time, rclass
-	syntax [, BINs(integer 10) TOPk(string) NOGraph *]
+	syntax [, BINs(integer 10) TOPk(string) NOPlot NAME(string asis) SAVing(string asis) EXPort(string asis) *]
 	local k = 10
 	if `"`topk'"' != "" _nwrem_diagtopk k `"`topk'"'
 	if `bins' < 2 | `bins' > 1000 {
 		di as error "bins() must be an integer between 2 and 1000"
 		exit 198
 	}
+	_nwrem_gcheck, default(time) cmd(estat time) `noplot' name(`name') saving(`saving') export(`export') gopts(`"`options'"')
+	local draw = r(draw)
+	local nameopt `"`r(nameopt)'"'
+	local gname `"`r(name)'"'
+	local gsv `"`r(saving)'"'
+	local gex `"`r(export)'"'
 	local interval = ("`e(lik)'" == "interval")
 	_nwrem_diagrun `k'
 	tempname fin
@@ -374,22 +444,29 @@ program _nwrem_estat_time, rclass
 	return scalar exp_total = `texp'
 	return matrix bins = `M'
 	return scalar topk = `k'
-	if "`nograph'" == "" {
+	if `draw' {
+		if `interval' {
+			local yt "Events per bin"
+			local ttl "Observed versus expected events over time"
+		}
+		else {
+			local yt "Top-`k' hits per bin"
+			local ttl "Observed versus expected top-`k' hits over time"
+		}
+		_nw_gfinish title "`ttl'", gopts(`"`options'"')
+		local tt `r(t)'
+		_nw_gfinish blk "Time (mean event time of the bin)", kind(xtitle) gopts(`"`options'"')
+		local xt `r(t)'
+		_nw_gfinish blk "`yt'", kind(ytitle) gopts(`"`options'"')
+		local yt2 `r(t)'
 		frame __nwrem_dgev {
-			if `interval' {
-				local yt "Events per bin"
-				local ttl "Observed versus expected events over time"
-			}
-			else {
-				local yt "Top-`k' hits per bin"
-				local ttl "Observed versus expected top-`k' hits over time"
-			}
 			twoway (connected obs tmean, lcolor(navy) mcolor(navy) msymbol(O)) ///
 				(connected expd tmean, lcolor(maroon) mcolor(maroon) msymbol(T) lpattern(dash)), ///
-				xtitle("Time (mean event time of the bin)") ytitle("`yt'") ///
+				`xt' `yt2' `tt' graphregion(color(white)) ///
 				legend(order(1 "observed" 2 "expected under the model") rows(1) position(6)) ///
-				title("`ttl'") note("Bins hold equally many consecutive events. Extension of nwrem.") `options'
+				note("Bins hold equally many consecutive events. Extension of nwrem.") `nameopt' `options'
 		}
+		_nw_gfinish save, name(`gname') saving(`"`gsv'"') export(`"`gex'"')
 	}
 	_nwrem_diagclean
 end

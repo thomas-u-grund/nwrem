@@ -949,12 +949,16 @@ STDLL stata_call(int argc, char *argv[]) {
 		SF_vstore(2, 1, (ST_double)REM_PROTOCOL);
 		return 0;
 	}
+#ifndef REM_NO_DIAG    /* -DREM_NO_DIAG builds a plugin as it was before code 40 (the tests use it to check the message of an old plugin) */
 	if (code == 98) {      /* diagnostics level: 1 = code 40 (per-event ranks, expected counts) available */
 		free(argbuf);
 		SF_vstore(2, 1, 1.0);
 		return 0;
 	}
 	if (code != 20 && code != 21 && code != 22 && code != 30 && code != 40) {
+#else
+	if (code != 20 && code != 21 && code != 22 && code != 30) {
+#endif
 		free(argbuf);
 		SF_error("rem_sim: unknown algorithm code (plugin and package versions do not match)\n");
 		return 198;

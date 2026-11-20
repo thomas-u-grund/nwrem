@@ -141,3 +141,11 @@ it leaves `e()` alone and exits before `ereturn post`. Results travel in the fra
 what makes `estat` call `nwrem_estat` (without it: "estat rank not valid"); inside `frame x { ... }` blocks do not use `return`; do not name a Stata matrix
 and a returned scalar the same (`return scalar bins` was overwritten by `return matrix bins`); `args` splits `el(M, 1, 2)` into several tokens.
 Code 40 uses the dense evaluator (O(n^2) per event, the cost of ranking every dyad) and needs a plugin built from this source: code 98 reports it.
+
+## Protocol 2 is kept although the plugin gained code 40; the diagnostics probe with code 98
+
+`REM_PROTOCOL` / `REM_PROTOCOL_NEEDED()` describe the blob layout of the fit, which did not change when code 40 (estat rank/actors/time) was added, so the number stays 2: a 1.5.x package keeps working with the 1.6.0 plugin. The diagnostics are the only caller of code 40 and probe the plugin first (`98`: returns 1; plugins before 1.6.0 stop with "unknown algorithm code" and `RemDiag()` turns that into r(3495) and a message). Raise the protocol only when the blob layout or the meaning of an argument of codes 20/21/22/30 changes. `test_nwrem_estat_oldplugin.do` builds the pre-code-40 plugin with `-DREM_NO_DIAG` (the macro removes codes 40 and 98 from `native/rem_sim.c`; the default build is unaffected).
+
+## Graph options of estat go through the core helper `_nw_gfinish`, which needs core 3.29.0
+
+`_nwrem_gcheck` in `nwrem_estat.ado` looks for the helper only when a graph is requested (or a graph option is given with `noplot`, to get its r(198)); an older core gives r(199) and a message before the (expensive) evaluation. A `gopts(`"`options'"')` that is empty arrives as the literal compound quote `` `""' `` and must be stripped (`gettoken`) before testing for emptiness. The estat plots are new in 1.6.0, so there is no `nograph` synonym.
