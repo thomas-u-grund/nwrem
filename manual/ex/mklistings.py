@@ -28,7 +28,7 @@ for log in sorted(glob.glob(os.path.join(here, "ex*.log"))):
 fv = os.path.join(here, "out", "st_version.txt")
 if os.path.exists(fv):
     t = open(fv).read()
-    t = re.sub(r"native plugin\s+: .*?no separate version number\n> \)", "native plugin           : ~/Library/Application Support/Stata/ado/plus/r/rem_sim_macos.plugin\n> (ships with the package, no separate version number)", t, flags=re.S)
+    t = re.sub(r"native plugin\s+: .*?no separate version number\)", "native plugin           : ~/Library/Application Support/Stata/ado/plus/r/rem_sim_macos.plugin\n> (ships with the package, no separate version number)", t, flags=re.S)
     open(fv, "w").write(t)
 # a short extract of the two validation logs: the first case lines and the summary lines
 out = []

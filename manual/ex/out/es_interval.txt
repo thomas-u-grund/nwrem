@@ -1,0 +1,24 @@
+. estat time, bins(8) noplot
+
+Observed versus expected over time (an extension of nwrem; relevent has no such
+method).
+Waiting-time likelihood: observed = number of events in the bin of consecutive
+events; expected = sum of the integrated rates of the fitted model over the
+intervals that end with those events (the last bin also carries the final
+interval up to endtime()). The model has no baseline rate, so a level that is
+far off says the effects cannot reproduce the overall event rate.
+------------------------------------------------------------------
+   bin   events     time from    time to     observed    expected
+     1        78     .0005973      .00222      78.000      60.981
+     2        79      .002222     .003158      79.000      24.134
+     3        78      .003166     .004903      78.000      45.947
+     4        79      .004933     .006242      79.000      34.705
+     5        78      .006246      .01933      78.000     331.261
+     6        79       .01933       .0214      79.000      52.888
+     7        78       .02141       .0227      78.000      32.556
+     8        79        .0227      .03031      79.000     193.788
+------------------------------------------------------------------
+total                                         628.000     776.261
+
+. quietly estat time, bins(8) name(tmi) export(../fig/es_timeint.pdf) title("") xs
+> ize(4.2) ysize(3.2)

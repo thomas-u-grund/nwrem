@@ -1,0 +1,19 @@
+. estat time, bins(8) noplot
+
+Observed versus expected over time (an extension of nwrem; relevent has no such
+method).
+Ordinal likelihood (it has no time scale): observed = number of events whose
+observed dyad is among the 10 most likely dyads of the risk set (ties split);
+expected = sum of the probabilities of the 10 most likely dyads.
+------------------------------------------------------------------
+   bin   events     time from    time to     observed    expected
+     1        78        3.235       3.331       4.000      18.799
+     2        79        3.331       3.386       4.000      10.775
+     3        79        3.386       3.488       4.000      10.810
+     4        79        3.489       3.568       3.000      11.036
+     5        79        3.568       4.337       4.000       9.272
+     6        79        4.341       4.463       0.000       9.882
+     7        79        4.463        4.54       2.000       9.848
+     8        79         4.54       4.989       1.000      10.267
+------------------------------------------------------------------
+total                                          22.000      90.689

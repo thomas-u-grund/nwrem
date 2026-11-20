@@ -31,15 +31,16 @@
 \newcommand{\showlogpart}[3]{\lstinputlisting[firstline=#2,lastline=#3]{ex/out/#1.txt}}
 \newcommand{\inc}[1]{\typeout{>>>#1}\input{#1}}
 \input{gen_validnums.tex}
-\newcommand{\manualseries}{1.5}
-% The manual is labelled by the minor series (valid for 1.5.x): change \manualseries only for a new minor or major release whose documented behaviour changed.
+\newcommand{\manualseries}{1.6}
+% The manual is labelled by the minor series (valid for 1.6.x): change \manualseries only for a new minor or major release whose documented behaviour changed.
 \newcommand{\pkgversion}{1.6.0}
 \newcommand{\pkgdate}{20 November 2026}
 % Exact version and date of the release that produced the listings; the examples were run with the nwcommands core version \corever.
-\newcommand{\corever}{3.26.0}
-% The manual is published on the package website (no Zenodo record).
+\newcommand{\corever}{3.29.0}
+% The manual has a Zenodo record; its DOI is printed in the citation.
+\newcommand{\manualdoi}{10.5281/zenodo.24398012}
 \newcommand{\manualurl}{https://nwcommands.org/nwrem/nwrem_manual.pdf}
-\newcommand{\citedoi}{ \url{\manualurl}}
+\newcommand{\citedoi}{ Zenodo. \url{https://doi.org/\manualdoi}}
 \title{\textbf{nwrem}\\[4pt]\large Relational event models in Stata\\ (a package that builds on \texttt{nwcommands})\\[6pt]\normalsize User manual and reference}
 \author{Thomas U. Grund\\ RWTH Aachen University}
 \date{This manual describes \texttt{nwrem} \manualseries.x\\ (examples produced with \texttt{nwrem} \pkgversion, \pkgdate)}
@@ -61,6 +62,7 @@
 \inc{ch04_options}
 \inc{ch05_effects}
 \inc{ch06_results}
+\inc{ch06b_estat}
 \inc{ch07_examples}
 \inc{ch08_validation}
 \inc{ch09_limits}

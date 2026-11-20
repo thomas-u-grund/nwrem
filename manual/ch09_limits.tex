@@ -7,7 +7,7 @@ This chapter says what \nwrem{} cannot do and which problems are known, and expl
 \begin{itemize}
   \item \textbf{Bayesian simulation.} The simulation-based estimation of \relevent{} (\texttt{fit.method} MCMC and BSIR) is not implemented: its output is random and cannot be validated against the random numbers of R. The posterior mode (\opt{postmode}) is available.
   \item \textbf{Sampling of the risk set} (\texttt{sample.size} of \relevent{}) is not implemented; the likelihood always uses the complete risk set, or the restriction of \opt{riskset()}, \opt{entry()} and \opt{exit()}.
-  \item \textbf{Simulation of event sequences} and \textbf{goodness-of-fit residuals and predictions} are not implemented.
+  \item \textbf{Simulation of event sequences} and \textbf{predictions} for new data are not implemented; the diagnostics of Chapter~\ref{ch:estat} compare the fitted model with the data at hand.
   \item \textbf{Covariates that change over time.} All covariates (\opt{covsnd()}, \opt{covrec()}, \opt{covint()}, \opt{covevent()}) are fixed in time. Covariates that change with the events would need an event-wise data structure. Statistics of the history (degrees, inertia, recency, triads, participation shifts) change with the events by definition.
   \item \textbf{The participation shifts that are always zero.} \relevent{} defines seven participation shifts with undefined targets (for example \texttt{PSAB-B0}); its coefficients for them are always zero. \nwrem{} offers the six shifts that are not (Section~\ref{sec:ps}).
   \item \textbf{No intercept} (Section~\ref{sec:nointercept}).

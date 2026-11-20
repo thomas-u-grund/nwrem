@@ -24,14 +24,14 @@ Where the two programs differ in a way that matters to a user, this manual says 
   \item \textbf{Likelihoods.} The ordinal partial likelihood and the waiting-time (interval) likelihood, each with maximum likelihood or with the posterior mode under independent Student $t$ priors, and the conditioning on the first events (Chapter~\ref{ch:model}).
   \item \textbf{Effects.} All statistics of \relevent{} that are not identically zero: the degree and inertia effects, the recency effects, the covariate effects (of actors and of pairs, with several covariates per option), the triadic and shared-partner effects, the fixed effects of the actors and six participation shifts (Chapter~\ref{ch:effects}).
   \item \textbf{Risk sets.} The complete risk set of all ordered pairs, a restriction to given pairs, and actors that enter and leave the observation.
-  \item \textbf{Postestimation.} The results of every fit are stored for \texttt{estimates} (including \texttt{estimates stats}), \texttt{lrtest} and the other standard tools (Chapter~\ref{ch:results}).
+  \item \textbf{Postestimation.} The results of every fit are stored for \texttt{estimates} (including \texttt{estimates stats}), \texttt{lrtest} and the other standard tools (Chapter~\ref{ch:results}), and three diagnostics with graphs, \texttt{estat rank}, \texttt{estat actors} and \texttt{estat time}, which compare the fitted model with the observed events (Chapter~\ref{ch:estat}).
 \end{itemize}
 
-\paragraph{What \relevent{} has that \nwrem{} does not.} Bayesian simulation (MCMC and sampling importance resampling), the sampling of the risk set (\texttt{sample.size}), the simulation of event sequences, goodness-of-fit residuals and covariates that change over time are not implemented (Chapter~\ref{ch:limits}). There is no intercept, for a reason that lies in the model (Section~\ref{sec:nointercept}).
+\paragraph{What \relevent{} has that \nwrem{} does not.} Bayesian simulation (MCMC and sampling importance resampling), the sampling of the risk set (\texttt{sample.size}), the simulation of event sequences, covariates that change over time are not implemented (Chapter~\ref{ch:limits}). There is no intercept, for a reason that lies in the model (Section~\ref{sec:nointercept}).
 
 \section{Installation and requirements}\label{sec:install}
 
-\nwrem{} needs Stata~17 or later and the core package \texttt{nwcommands}, version~3.24.0 or later. Install the core first, then \nwrem{}:
+\nwrem{} needs Stata~17 or later and the core package \texttt{nwcommands}, version~3.29.0 or later. Install the core first, then \nwrem{}:
 \begin{lstlisting}
 . net install nwcommands, from(https://nwcommands.org/net/) replace
 . nwinstall, modelpkg(nwrem)
@@ -39,7 +39,7 @@ Where the two programs differ in a way that matters to a user, this manual says 
 \texttt{nwinstall, modelpkg(nwrem)} installs the latest release; \texttt{nwinstall, everything} installs the core and all four model packages in one step. Without \texttt{nwinstall} the package can be installed directly from its repository, and a particular version from the release tag:
 \begin{lstlisting}
 . net install nwrem, from(https://raw.githubusercontent.com/thomas-u-grund/nwrem/main/) replace
-. net install nwrem, from(https://raw.githubusercontent.com/thomas-u-grund/nwrem/v1.5.0/) replace
+. net install nwrem, from(https://raw.githubusercontent.com/thomas-u-grund/nwrem/v1.6.0/) replace
 \end{lstlisting}
 \texttt{net describe nwrem} shows the version and the distribution date of the installed package, \texttt{nwrem version} the version of the package, of the core, the plugin in use and the version of \relevent{} that the results were compared with, and \texttt{e(version)} holds the version in the stored results. Quote it when you report an analysis.
 
@@ -51,7 +51,7 @@ This needs a C compiler (on macOS the command line tools of Xcode, on Linux \tex
 
 \paragraph{The Mata library.} The Mata library of \nwrem{} (\texttt{lnwrem.mlib}) is built with Stata~17, the oldest supported version, because a library built by a newer Stata is ignored by an older one (return code 3499). If the library does not load in your Stata, build it with your own Stata: \texttt{nwinstall, buildmata(nwrem)}. The command clears the data and the Mata objects in memory, so save first, and restart Stata afterwards.
 
-\paragraph{Platforms and versions.} Stata~17 or later is required; Stata~16 and older have not been tested and are not expected to work. The full test suite of version~\pkgversion{} was run on macOS with Stata~17, Stata~18 and StataNow~19.5. The timings in Chapter~\ref{ch:technical} were measured on Linux (Ubuntu 22.04, StataNow~19.5 MP). The test suite of version~1.4.0 was also run on Linux; for version~\pkgversion{} it has not yet been run on Linux or Windows, and Windows has never been tested.
+\paragraph{Platforms and versions.} Stata~17 or later is required; Stata~16 and older have not been tested and are not expected to work. The tests of the fitting command were run on macOS with Stata~17, Stata~18 and StataNow~19.5. The tests of the diagnostics of Chapter~\ref{ch:estat} were run on macOS with Stata~17 and on Linux (Ubuntu 22.04) and Windows~11 with StataNow~19.5 MP; Stata~18 was not run for them. The timings in Chapter~\ref{ch:technical} were measured on Linux (Ubuntu 22.04, StataNow~19.5 MP).
 
 \paragraph{The examples of this manual.} All listings are the output of Stata~17 runs with \nwrem{}~\pkgversion{} and the core package~\corever{}; the do-files that produce them are in the folder \texttt{manual/ex} of the repository. The data are the e-mail log of a manufacturing company (Section~\ref{sec:data}); they are distributed with the core package and read by \texttt{nwwebuse}.
 

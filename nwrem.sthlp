@@ -466,6 +466,13 @@ the R package it was compared with in {cmd:r(reference)}, and the license in {cm
 {p_end}
 
 
+{title:Manual}
+
+{pstd}
+A user manual (PDF in the {cmd:manual} folder of the package source) is archived at Zenodo, {browse "https://doi.org/10.5281/zenodo.24398012":doi:10.5281/zenodo.24398012}, all versions. Please cite it by that address and report the package version printed by {cmd:nwrem version}.
+{p_end}
+
+
 {title:Also see}
 
 {p 4 14 2}Help: {help nwrem_estat}, {help nwset}, {help nwattime}, {help nwergm}, {help nwsaom}{p_end}

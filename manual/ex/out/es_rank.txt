@@ -1,0 +1,22 @@
+. estat rank, noplot
+
+Rank diagnostic of the fitted model (an extension of nwrem; relevent has no such
+method).
+Rank of the observed dyad among all dyads of the risk set at the time of the
+event, by the fitted linear predictor (1 = most likely; tied dyads share the
+mid-rank).
+----------------------------------------------------------------------
+Events evaluated                                          631
+Events left out (condition())                               0
+Mean size of the risk set                            20592.00
+----------------------------------------------------------------------
+                                     observed fitted model no effects
+Mean rank                             2287.27                10296.50
+Median rank                            546.00
+Mean percentile rank                   0.1111                  0.5000
+Share of events in the top 10          0.0349       0.1437     0.0005
+Mean log prob. of observed dyad       -8.7667                 -9.9327
+----------------------------------------------------------------------
+Percentile rank = rank / size of the risk set. Fitted model: top-10 share
+expected under the model (the summed probability of the 10 most likely dyads).
+No effects: every dyad equally likely.

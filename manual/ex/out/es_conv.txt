@@ -1,0 +1,2 @@
+. quietly estat rank, name(rk2) saving(../fig/rank_demo) export(../fig/rank_demo.p
+> ng, width(1200)) scheme(s2color)

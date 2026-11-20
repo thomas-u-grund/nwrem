@@ -1,0 +1,11 @@
+. capture noisily estat rank, noplot name(x)
+estat rank: name(), saving(), export() and graph options need plot.
+
+. display "return code " _rc
+return code 198
+
+. capture noisily estat rank, noplot title("x")
+estat rank: name(), saving(), export() and graph options need plot.
+
+. display "return code " _rc
+return code 198

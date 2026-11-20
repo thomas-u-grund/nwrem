@@ -1,0 +1,22 @@
+. quietly nwwebuse manufacturing, nwclear
+
+. quietly levelsof sender, local(a) clean
+
+. quietly levelsof receiver, local(b) clean
+
+. global allact : list a | b
+
+. quietly keep if t < 5
+
+. quietly duplicates drop t, force
+
+. scalar unit = (5 - 3.2) * 144 * 143 / 628
+
+. quietly replace t = (t - 3.2) / unit
+
+. quietly do buildnet.doh
+
+. quietly nwbuild mail2
+
+. quietly nwrem mail2, nodsnd nidrec frpsndsnd interval starttime(0) endtime(`=(5 
+> - 3.2) / unit')
