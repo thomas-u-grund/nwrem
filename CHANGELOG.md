@@ -16,7 +16,7 @@ project uses [Semantic Versioning](https://semver.org/).
 - Help `nwrem`: the convention of `frpsndsnd` and `frrecsnd` (as in R's relevent): while the sender has sent (received) nothing yet, the statistic is 1/(n-1) for every receiver, not 0; the degree shares use 1/(n-1) at the first event; `rsndsnd`, `rrecsnd`, the triadic effects and the participation shifts are 0 when nothing has happened. Taking the fraction literally as 0 gives a different log likelihood.
 - Help `nwrem_estat`: the interval-model remark for `estat actors`.
 
-Tested on macOS with Stata 17 BE (`test_nwrem_covmatch`, `test_nwrem_plots`, `test_nwrem_ado`, `xt_rem_errors`, `test_nwrem_options14`, `test_nwrem_estat`, `test_nwrem_relevent14`). No native or library change; Stata 18, Linux and Windows not run for this version.
+Tested on macOS with Stata 17 BE (`test_nwrem_covmatch`, `test_nwrem_plots`, `test_nwrem_ado`, `xt_rem_errors`, `test_nwrem_options14`, `test_nwrem_estat`, `test_nwrem_relevent14`). On Linux (Ubuntu 22.04) and Windows 11 (both StataNow 19.5 MP): the new test and the package tests. No native or library change; Stata 18 was not run for this version.
 
 ## [1.6.0] - 2026-11-20
 
