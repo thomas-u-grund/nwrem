@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.6.0  20nov2026 author: Thomas Grund}{...}
+{* *! version 1.7.0  21nov2026 author: Thomas Grund}{...}
 {helpb nwtopical##analysis_dynamicmodels:[NW-2.6.8] Dynamic & Event-Based Models}
 
 {title:Title}
@@ -55,6 +55,9 @@ observed dyads rank better than chance), or with {cmd:plot(hist)} their histogra
 model expects: the sum over the events of the model probability that the actor is the sender (receiver) of the event; under
 the waiting-time likelihood the summed rate integrals. The table reports the correlation of observed and expected counts and
 the sum of squared Pearson residuals (describing the fit; not a test). The graph is a scatter plot with the 45 degree line.
+After a fit with {opt interval} the expected counts are summed rate integrals of a model without a baseline rate: their total need not equal
+the observed number of events (in a simulation 424.8 expected against 120 observed), and the table says so in a note. Judge such a fit by the
+correlations and the pattern around the 45 degree line, not by the level.
 
 {pstd}
 {cmd:estat time} compares observed and expected quantities over the event sequence in {opt bins()} bins of equally many consecutive
@@ -141,4 +144,4 @@ columns {cmd:events}, {cmd:time_from}, {cmd:time_to}, {cmd:observed}, {cmd:expec
 {p 4 14 2}Help: {help nwrem}{p_end}
 
 {hline}
-{pstd}{it:nwrem version 1.6.0, 20 November 2026}{p_end}{* nwversion}
+{pstd}{it:nwrem version 1.7.0, 21 November 2026}{p_end}{* nwversion}

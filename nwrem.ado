@@ -1,4 +1,4 @@
-*! version 1.6.0  20nov2026 nwrem
+*! version 1.7.0  21nov2026 nwrem
 * Copyright (C) 2026 Thomas U. Grund
 * This file is part of nwrem, a Stata package derived from the R package 'relevent' (Carter T. Butts; GPL (>= 2)).
 * nwrem is free software: you can redistribute it and/or modify it under the terms of the GNU General
@@ -23,7 +23,7 @@ program nwrem, eclass
 			exit
 		}
 	}
-	syntax [anything(name=netname)] [, NODSND NIDREC NIDSND NODREC NTDEGSND NTDEGREC FRPSNDSND FRRECSND COVSND(varlist numeric) COVREC(varlist numeric) COVINT(varlist numeric) COVEVENT(string) RSNDSND RRECSND ///
+	syntax [anything(name=netname)] [, NODSND NIDREC NIDSND NODREC NTDEGSND NTDEGREC FRPSNDSND FRRECSND COVSND(varlist numeric) COVREC(varlist numeric) COVINT(varlist numeric) COVEVENT(string) COVMATch(string) RSNDSND RRECSND ///
 		OTPSND ITPSND OSPSND ISPSND FESND FEREC FEINT PSABBA PSABBY PSABXA PSABXB PSABXY PSABAY ///
 		INTerval STARTtime(string) ENDtime(string) CONDition(string) RISKset(string) ENTRY(varname numeric) EXIT(varname numeric) ///
 		POSTmode PRIORMean(string) PRIORScale(string) PRIORDf(string) SEED(string) NWXDIAG(string) *]
@@ -35,6 +35,19 @@ program nwrem, eclass
 		capture confirm integer number `seed'
 		if _rc | real(`"`seed'"') < 0 | real(`"`seed'"') > 2147483647 {
 			di as error "seed() must be an integer between 0 and 2147483647"
+			error 198
+		}
+	}
+	// how covevent() and riskset() networks are matched to the event network: by position (default) or by node label
+	local __nwrem_cmatch "position"
+	if `"`covmatch'"' != "" {
+		if inlist(strlower(`"`covmatch'"'), "label", "position") local __nwrem_cmatch = strlower(`"`covmatch'"')
+		else {
+			di as error "covmatch() must be {bf:position} or {bf:label}"
+			error 198
+		}
+		if `"`covevent'"' == "" & `"`riskset'"' == "" {
+			di as error "{p 0 0 2}covmatch() belongs to covevent() and riskset(): give one of them.{p_end}"
 			error 198
 		}
 	}
@@ -229,7 +242,11 @@ program nwrem, eclass
 			di as error "{p 0 0 2}covevent() network `__nwrem_cvn' has `covevnodes' actors but `netname' has `nodes' - covevent() requires the same actors as `netname'.{p_end}"
 			error 198
 		}
-		mata: `__nwrem_covevmat' = (`__nwrem_covevmat', *(`covevnetobj'->get_matrix_mod(1,1)))
+		tempname __nwrem_cm
+		mata: `__nwrem_cm' = *(`covevnetobj'->get_matrix_mod(1,1))
+		_nwrem_matchnote `netobj' `covevnetobj' `__nwrem_cm' `nodes', what(covevent(`__nwrem_cvn')) how(`__nwrem_cmatch') quiet(`nwxdiag')
+		mata: `__nwrem_covevmat' = (`__nwrem_covevmat', `__nwrem_cm')
+		capture mata: mata drop `__nwrem_cm'
 		mata: st_local("__nwrem_covmiss", strofreal(missing(`__nwrem_covevmat'[., (cols(`__nwrem_covevmat') - `nodes' + 1)..cols(`__nwrem_covevmat')]) - missing(diagonal(`__nwrem_covevmat'[., (cols(`__nwrem_covevmat') - `nodes' + 1)..cols(`__nwrem_covevmat')]))))
 		if `__nwrem_covmiss' > 0 {
 			di as error "{p 0 0 2}covevent() network `__nwrem_cvn' has `__nwrem_covmiss' missing tie values; the covariate must be defined for every ordered pair of actors.{p_end}"
@@ -245,6 +262,7 @@ program nwrem, eclass
 			error 198
 		}
 		mata: `__nwrem_mask' = *(`covevnetobj'->get_matrix_mod(1,1))
+		_nwrem_matchnote `netobj' `covevnetobj' `__nwrem_mask' `nodes', what(riskset(`riskset')) how(`__nwrem_cmatch') quiet(`nwxdiag')
 		mata: st_local("__nwrem_covmiss", strofreal(missing(`__nwrem_mask') - missing(diagonal(`__nwrem_mask'))))
 		if `__nwrem_covmiss' > 0 {
 			di as error "{p 0 0 2}riskset() network `riskset' has `__nwrem_covmiss' missing tie values; every ordered pair of actors must be 0 (cannot occur) or non-zero (can occur).{p_end}"
@@ -363,7 +381,8 @@ program nwrem, eclass
 	ereturn local cmd "nwrem"
 	ereturn local cmdline `"nwrem `0'"'
 	ereturn local estat_cmd "nwrem_estat"
-	ereturn local version "1.6.0"
+	if `"`covevent'`riskset'"' != "" ereturn local covmatch "`__nwrem_cmatch'"
+	ereturn local version "1.7.0"
 	if `__nwrem_interval' local __nwrem_lik "waiting-time likelihood"
 	else local __nwrem_lik "ordinal partial likelihood"
 	if `__nwrem_prior' local __nwrem_meth "posterior mode"
@@ -478,4 +497,38 @@ program _nwrem_tabopts
 		if c(linesize) < 100 | c(lstretch) == "off" | `: list posof "nolstretch" in __di' local __add noci
 	}
 	c_local `__mac' `"level(`__lev') `__di' `__add'"'
+end
+
+// Matches a pairwise network (covevent(), riskset()) to the event network and says how it was done. Use:
+// _nwrem_matchnote <event netobj> <other netobj> <mata matrix name (reordered in place)> <nodes>, what() how(position|label) [quiet()].
+// position: row i of the matrix is actor i of the event network; the note says whether the node labels agree. label: the matrix is
+// reordered so that its row and column for each actor are those of the node with the same label (r(459) if the label sets differ or
+// a label occurs twice).
+capture program drop _nwrem_matchnote
+program _nwrem_matchnote
+	version 14
+	args evobj otobj mat nodes
+	syntax [anything] , WHAT(string) HOW(string) [QUIET(string)]
+	tempname A B P
+	mata: `A' = colshape(`evobj'->get_nodenames(), 1)
+	mata: `B' = colshape(`otobj'->get_nodenames(), 1)
+	mata: st_local("__same", strofreal(rows(`A') == rows(`B') & all(`A' :== `B')))
+	mata: st_local("__sameset", strofreal(rows(`A') == rows(`B') & all(sort(`A', 1) :== sort(`B', 1))))
+	mata: st_local("__dupe", strofreal(rows(uniqrows(`A')) < rows(`A') | rows(uniqrows(`B')) < rows(`B')))
+	if "`how'" == "label" {
+		if !`__sameset' | `__dupe' {
+			capture mata: mata drop `A' `B'
+			if `__dupe' di as error "{p 0 0 2}`what': matching by label needs every node label to occur once in both networks.{p_end}"
+			else di as error "{p 0 0 2}`what': the node labels of the network differ from those of the event network, so it cannot be matched by label (use {bf:covmatch(position)} if the actors are in the same order).{p_end}"
+			error 459
+		}
+		mata: `P' = J(rows(`A'), 1, .); `P'[order(`A', 1)] = order(`B', 1); `mat' = `mat'[`P', `P']
+		if "`quiet'" == "" di as text "{p 0 6 2}Note: `what' matched to the event network by label.{p_end}"
+	}
+	else if "`quiet'" == "" {
+		if `__same' di as text "{p 0 6 2}Note: `what' matched to the event network by position (labels agree).{p_end}"
+		else if `__sameset' & !`__dupe' di as error "{p 0 6 2}Warning: `what' matched to the event network by position, but the node labels are in a DIFFERENT ORDER: position matching is probably wrong; use {bf:covmatch(label)}.{p_end}"
+		else di as error "{p 0 6 2}Warning: `what' matched to the event network by position (labels DIFFER: position matching may be wrong; use {bf:covmatch(label)} if the labels identify the same actors).{p_end}"
+	}
+	capture mata: mata drop `A' `B' `P'
 end

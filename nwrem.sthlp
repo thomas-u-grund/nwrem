@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.6.0  20nov2026 author: Thomas Grund}{...}
+{* *! version 1.7.0  21nov2026 author: Thomas Grund}{...}
 {marker topic}
 {helpb nwtopical##analysis_dynamicmodels:[NW-2.6.8] Dynamic & Event-Based Models}
 
@@ -28,6 +28,7 @@
 {opth covrec(varlist)}
 {opth covint(varlist)}
 {opth covevent(netlist)}
+{opt covmatch(position|label)}
 {opt rsndsnd}
 {opt rrecsnd}
 {opt otpsnd}
@@ -71,8 +72,8 @@
 {synopt:{opt ntdegsnd}}sender's normalized total degree (in+out, averaged) affects the sending rate{p_end}
 {synopt:{opt ntdegrec}}receiver's normalized total degree (in+out, averaged) affects the receiving rate{p_end}
 {syntab:Inertia effects}
-{synopt:{opt frpsndsnd}}"inertia": the fraction of the sender's own past sends that went specifically to this receiver affects the sending rate to that receiver{p_end}
-{synopt:{opt frrecsnd}}"reciprocity of receipt": the fraction of the sender's own past receipts that came specifically from this receiver affects the sending rate to that receiver{p_end}
+{synopt:{opt frpsndsnd}}"inertia": the fraction of the sender's own past sends that went specifically to this receiver affects the sending rate to that receiver (1/({it:n}-1) for every receiver while the sender has not yet sent anything){p_end}
+{synopt:{opt frrecsnd}}"reciprocity of receipt": the fraction of the sender's own past receipts that came specifically from this receiver affects the sending rate to that receiver (1/({it:n}-1) for every receiver while the sender has not yet received anything){p_end}
 {syntab:Covariate effects}
 {synopt:{opth covsnd(varlist)}}numeric per-actor covariates (one coefficient each) affect the sending rate (an "ego" effect - the variables are read from the CURRENT dataset, one row per actor,
 matched to the actors by their node labels - see {help nwload}'s {opt xvars} option below){p_end}
@@ -107,6 +108,7 @@ past senders, most recent = rank 1; 0 if never received from before) - a recency
 {synopt:{opt starttime(#)}}start of the observation, with {opt interval}; default 0{p_end}
 {synopt:{opt endtime(#)}}end of the observation, with {opt interval}; the last interval, from the last event to the end, enters as a survival term; default the time of the last event{p_end}
 {synopt:{opt condition(#)}}the first {it:#} events only build the history of the statistics and do not enter the likelihood{p_end}
+{synopt:{opt covmatch(position|label)}}how the networks of {opt covevent()} and {opt riskset()} are matched to the actors of the event network: by {opt position} (the default; row and column {it:i} of the network are actor {it:i}) or by node {opt label}; see {it:Matching} below{p_end}
 {synopt:{opth riskset(netname)}}network with the same actors; a tie value of 0 means that the ordered pair can never be an event, any other value that it can; the pairs that are not possible leave the risk set at every event{p_end}
 {synopt:{opth entry(varname)}}per-actor time of entry: before it the actor is not in the risk set (as sender or receiver); missing means present from the start{p_end}
 {synopt:{opth exit(varname)}}per-actor time of exit: after it the actor leaves the risk set; missing means present until the end{p_end}
@@ -295,6 +297,30 @@ explicitly; for one that is genuinely directional (e.g. "i reports to j"), that 
 exactly what {bf:covevent()} is for.
 
 {pstd}
+{bf:Matching of covariates to actors.} Per-actor variables ({opt covsnd()}, {opt covrec()}, {opt covint()}, {opt entry()}, {opt exit()}):
+with the node-label variable {bf:_nwnode} in the dataset every actor is matched to its row by LABEL, whatever the order of the rows
+(an actor without a row, or with two rows, is an error, r(198)); without {bf:_nwnode} the dataset must have exactly one row per actor and
+row {it:i} is actor {it:i} of the event network (matching by position). Network covariates ({opt covevent()} and {opt riskset()}): the
+default {opt covmatch(position)} reads row and column {it:i} of the covariate network as actor {it:i} of the event network, whatever the
+labels, so a network whose nodes are in another order is silently misaligned. {opt covmatch(label)} reorders the covariate network by node
+label instead; the label sets of the two networks must be the same and every label must occur once, otherwise the command stops with error
+459. In either case {cmd:nwrem} prints one line per network saying how it was matched; with position matching it says whether the labels
+agree, and when they do not (a different order, or different labels) the line is a warning in red. {opt covmatch()} requires
+{opt covevent()} or {opt riskset()} and is stored in {bf:e(covmatch)}.
+
+{pstd}
+{bf:The statistics of the inertia effects when nothing is known yet} (the convention of {cmd:relevent}). {bf:frpsndsnd} is, for the pair
+(sender {it:j}, receiver {it:k}), the number of past events {it:j} to {it:k} divided by the number of past sends of {it:j}. As long as {it:j}
+has not sent anything, that denominator is zero and the statistic is not 0 but 1/({it:n}-1) for EVERY receiver {it:k}; once {it:j} has sent at
+least once it is the fraction (0 for receivers never sent to). {bf:frrecsnd} follows the same rule with the past receipts of {it:j}: the
+number of past events {it:k} to {it:j} divided by the number of past receipts of {it:j}, and 1/({it:n}-1) for every {it:k} as long as {it:j}
+has received nothing. The degree shares {bf:nodsnd}, {bf:nidrec}, {bf:nidsnd}, {bf:nodrec}, {bf:ntdegsnd} and {bf:ntdegrec} (past events
+involving the actor divided by the number of past events, or by twice that for the total degree) use 1/({it:n}-1) for every actor at the
+first event, when there is no past. The other history effects have no such convention: {bf:rsndsnd}, {bf:rrecsnd}, the triadic and
+shared-partner effects and the participation shifts are 0 when nothing has happened yet. The fallback is part of the fitted model: a fit
+that takes the fraction literally as 0 for a sender without past sends has a different log likelihood.
+
+{pstd}
 {bf:A note on precision}: {cmd:nodsnd}/{cmd:nidrec}/{cmd:nidsnd}/{cmd:nodrec}/{cmd:ntdegsnd}/
 {cmd:ntdegrec} are each a running average - the fraction of {it:all prior events} in which an
 actor sent/received - and that fraction's cross-actor spread narrows as the event sequence grows
@@ -431,6 +457,7 @@ regardless of how often (contrast with {cmd:frpsndsnd} above, which is about fre
 {synopt:{bf:e(cmd)}}{bf:nwrem}{p_end}
 {synopt:{bf:e(version)}}release of {cmd:nwrem} that produced the results{p_end}
 {synopt:{bf:e(title)}}"Relational event model (" likelihood and estimator ")"{p_end}
+{synopt:{bf:e(covmatch)}}{bf:position} or {bf:label} (only with {opt covevent()} or {opt riskset()}){p_end}
 {synopt:{bf:e(lik)}}{bf:ordinal} or {bf:interval}{p_end}
 {synopt:{bf:e(depvar)}}name of the event network fit{p_end}
 {synopt:{bf:e(cmdline)}}the command as typed (used by {help nwrem_estat:estat} to set the model up again){p_end}
@@ -478,4 +505,4 @@ A user manual (PDF in the {cmd:manual} folder of the package source) is archived
 {p 4 14 2}Help: {help nwrem_estat}, {help nwset}, {help nwattime}, {help nwergm}, {help nwsaom}{p_end}
 
 {hline}
-{pstd}{it:nwrem version 1.6.0, 20 November 2026}{p_end}{* nwversion}
+{pstd}{it:nwrem version 1.7.0, 21 November 2026}{p_end}{* nwversion}

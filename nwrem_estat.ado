@@ -1,4 +1,4 @@
-*! version 1.6.0  20nov2026 nwrem_estat
+*! version 1.7.0  21nov2026 nwrem_estat
 * Copyright (C) 2026 Thomas U. Grund
 * This file is part of nwrem, a Stata package derived from the R package 'relevent' (Carter T. Butts; GPL (>= 2)).
 * nwrem is free software: you can redistribute it and/or modify it under the terms of the GNU General
@@ -294,6 +294,9 @@ program _nwrem_estat_actors, rclass
 	di as text "Sum of squared Pearson residuals" _col(30) as result %10.2f `x2s' _col(52) %10.2f `x2r'
 	di as text "{hline 66}"
 	di as text "{p 0 0 2}Pearson residual = (observed - expected) / sqrt(expected); the sums describe the fit, they are not a test (events are not independent draws given the effects).{p_end}"
+	if "`e(lik)'" == "interval" {
+		di as text "{p 0 6 2}Note: waiting-time likelihood. The expected totals are summed rate integrals; the model has no baseline rate, so they need not equal the observed totals, and a level far off says the effects cannot reproduce the overall event rate (compare the correlations, not the levels).{p_end}"
+	}
 	if "`list'" != "" {
 		di
 		frame __nwrem_dgact: list actor obssnd expsnd obsrec exprec, noobs sep(0) abbreviate(12)

@@ -3,6 +3,21 @@
 All notable changes to nwrem are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project uses [Semantic Versioning](https://semver.org/).
 
+## [1.7.0] - 2026-11-21
+
+### Added
+- **`covmatch(position|label)`**: how the networks of `covevent()` and `riskset()` are matched to the actors of the event network. The default `position` is the behaviour of all earlier versions (row and column i of the covariate network are actor i of the event network), so no result changes. `covmatch(label)` reorders the covariate network by node label; the label sets must be identical and every label must occur once (otherwise r(459) with a message). Stored in `e(covmatch)`.
+- **A note on every fit with `covevent()` or `riskset()` says how the network was matched**: "covevent(x) matched to the event network by position (labels agree)", "... by label", or, as a red warning, "... by position, but the node labels are in a DIFFERENT ORDER" and "... by position (labels DIFFER: position matching may be wrong ...)". Before, a covariate network on other labels, or in another order, ran silently.
+- `estat actors` after a fit with `interval` prints a note under the table: the expected totals are summed rate integrals of a model without a baseline rate and need not equal the observed totals.
+- Test `cscripts/test_nwrem_covmatch.do` (position, label, reversed order, other labels, note texts, `riskset()`, estat after a label fit, the numbers of 1.6.0 unchanged, actor covariates by `_nwnode`, the `estat actors` note).
+
+### Changed (documentation only)
+- Help `nwrem`: the matching rule of every kind of covariate (per-actor variables are matched by `_nwnode` label when the dataset has it, otherwise by row order = actor order; network covariates by position or label) is stated in a new paragraph.
+- Help `nwrem`: the convention of `frpsndsnd` and `frrecsnd` (as in R's relevent): while the sender has sent (received) nothing yet, the statistic is 1/(n-1) for every receiver, not 0; the degree shares use 1/(n-1) at the first event; `rsndsnd`, `rrecsnd`, the triadic effects and the participation shifts are 0 when nothing has happened. Taking the fraction literally as 0 gives a different log likelihood.
+- Help `nwrem_estat`: the interval-model remark for `estat actors`.
+
+Tested on macOS with Stata 17 BE (`test_nwrem_covmatch`, `test_nwrem_plots`, `test_nwrem_ado`, `xt_rem_errors`, `test_nwrem_options14`, `test_nwrem_estat`, `test_nwrem_relevent14`). No native or library change; Stata 18, Linux and Windows not run for this version.
+
 ## [1.6.0] - 2026-11-20
 
 ### Added
