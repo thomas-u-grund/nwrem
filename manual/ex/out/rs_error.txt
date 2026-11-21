@@ -1,4 +1,7 @@
 . capture noisily nwrem mail, nodsnd nidrec riskset(samediv)
+Warning: riskset(samediv) matched to the event network by position, but the node
+      labels are in a DIFFERENT ORDER: position matching is probably wrong; use
+      covmatch(label).
 nwrem: event 1 of the sorted event sequence is a dyad that is not in the risk
 set given by riskset().
 

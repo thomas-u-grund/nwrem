@@ -54,6 +54,7 @@ Without \opt{endtime()} the observation ends with the last event, and \texttt{e(
 \showlog{rs_fit}
 The first fit uses all $144\cdot143=20{,}592$ pairs as the risk set, the second only the 6,664 within-division pairs. The log likelihoods are not comparable, because the sets of alternatives differ. The coefficients differ as well, because every event is now compared with a different set of alternatives. If an event is not in the risk set, \nwrem{} stops:
 \showlog{rs_error}
+The warning above the error is the note that every fit with \opt{riskset()} or \opt{covevent()} prints about the matching of the network to the actors (Section~\ref{sec:covmatch}): here the network \texttt{samediv} was built from the events of the window, so its nodes are in another order than those of \texttt{mail}, and with the default position matching the risk set would be read for the wrong actors. In the fits above, where the labels agree, the note says so.
 \paragraph{Entry and exit.} Per-actor windows are variables of the current dataset. We let the employees of division E85 leave the observation after day 4.0 and those of division E70 join it on day 3.6. An event after the exit time of one of its actors is an error:
 \showlog{rs_exit}
 We drop the events that violate the windows (569 events remain), and fit the model first with the complete risk set and then with the windows:

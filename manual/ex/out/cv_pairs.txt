@@ -25,6 +25,7 @@
 . nwset, mat(T) name(samediv) directed
 
 . nwrem mail, frpsndsnd covevent(samesup)
+Note: covevent(samesup) matched to the event network by position (labels agree).
 ------------------------------------------------------------
 Relational event model (ordinal partial likelihood, MLE)
 Network: mail                          Actors: 144
@@ -40,6 +41,8 @@ covevent_samesup |   .8608735   .1256691     6.85   0.000
 . estimates store one
 
 . nwrem mail, frpsndsnd covevent(samesup samediv)
+Note: covevent(samesup) matched to the event network by position (labels agree).
+Note: covevent(samediv) matched to the event network by position (labels agree).
 ------------------------------------------------------------
 Relational event model (ordinal partial likelihood, MLE)
 Network: mail                          Actors: 144

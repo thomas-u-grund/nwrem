@@ -1,0 +1,19 @@
+. estat actors, role(sender) noplot
+
+Observed and expected events by actor (an extension of nwrem; relevent has no
+such method).
+Expected = sum over the events of the model probability that the actor is the
+sender (receiver); under the waiting-time likelihood, the summed rate integrals.
+------------------------------------------------------------------
+Actors                                        144  Events         628
+------------------------------------------------------------------
+                                Sender                Receiver
+Correlation observed, expected    0.0052               0.7303
+Sum of squared Pearson residuals    842.54             678.05
+------------------------------------------------------------------
+Pearson residual = (observed - expected) / sqrt(expected); the sums describe the
+fit, they are not a test (events are not independent draws given the effects).
+Note: waiting-time likelihood. The expected totals are summed rate integrals;
+      the model has no baseline rate, so they need not equal the observed
+      totals, and a level far off says the effects cannot reproduce the overall
+      event rate (compare the correlations, not the levels).

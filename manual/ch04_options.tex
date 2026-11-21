@@ -28,6 +28,7 @@ Option & Description\\
 \opt{ospsnd}, \opt{ispsnd} & Outbound and inbound shared partners.\\
 \opt{covsnd(varlist)}, \opt{covrec(varlist)}, \opt{covint(varlist)} & Numeric covariates of the actors: of the sender, of the receiver, of both together. One coefficient per variable.\\
 \opt{covevent(netlist)} & Covariates of the pair, read from networks with the same actors. One coefficient per network.\\
+\opt{covmatch(position|label)} & How the networks of \opt{covevent()} and \opt{riskset()} are matched to the actors of the event network: by \opt{position} (default) or by node \opt{label}. Section~\ref{sec:covmatch}.\\
 \opt{fesnd}, \opt{ferec}, \opt{feint} & Fixed effects of the actors as sender, as receiver, as both; one coefficient per actor but the first.\\
 \opt{psabba}, \opt{psabby}, \opt{psabxa}, \opt{psabxb}, \opt{psabxy}, \opt{psabay} & Participation shifts, which depend on the previous event.\\
 \bottomrule
@@ -111,6 +112,19 @@ The options \opt{nopvalues}, \opt{cformat()}, \opt{pformat()} and \opt{sformat()
   \item A two-mode network is refused (return code 6088), and so is a network with missing tie values (return code 416). The diagonal is not part of the risk set; a missing or non-zero diagonal is read as zero.
   \item Declaring a covariate network from an edge list with \texttt{nwset} does \emph{not} symmetrize it: an ordered pair without a row gets the value 0 even if the reverse pair was given. For a symmetric covariate supply both ordered pairs, or build it from a matrix (Section~\ref{sec:ex-cov}). For a directional covariate ("$i$ reports to $j$") the asymmetry is exactly what \opt{covevent()} is for. If you give the covariate as an edge list, add the option \texttt{edgelist} to \texttt{nwset}, because \texttt{nwset} otherwise reads three variables as a wide affiliation matrix.
 \end{itemize}
+
+\subsection{covmatch(): matching the networks to the actors}\label{sec:covmatch}
+
+The networks of \opt{covevent()} and \opt{riskset()} must have the same number of actors as the event network, but \nwrem{} has to decide which row and column of such a network belongs to which actor of the event network. \opt{covmatch(position)}, the default, reads row and column $i$ as actor $i$ of the event network, whatever the node labels; a covariate network whose nodes are in another order is then misaligned without an error. \opt{covmatch(label)} reorders the covariate network by node label: the label sets of the two networks must be identical and every label must occur once, otherwise \nwrem{} stops with return code 459 and a message. The option applies to every network of \opt{covevent()} and to \opt{riskset()} and is an error without one of them; its value is stored in \texttt{e(covmatch)}.
+
+Every fit with \opt{covevent()} or \opt{riskset()} prints one note line per network that says how the network was matched, for example
+\begin{lstlisting}
+covevent(samesup) matched to the event network by position (labels agree)
+covevent(samesup) matched to the event network by label
+\end{lstlisting}
+With position matching the note says whether the labels of the two networks agree. If they do not, the line is a warning (in red on the screen): \emph{by position, but the node labels are in a DIFFERENT ORDER} when the same labels occur in another order, and \emph{by position (labels DIFFER: position matching may be wrong ...)} when the labels are different. Then check the networks, or fit again with \opt{covmatch(label)}.
+
+The per-actor variables of \opt{covsnd()}, \opt{covrec()}, \opt{covint()}, \opt{entry()} and \opt{exit()} are matched in the same spirit but without this option: when the current dataset has the variable \texttt{\_nwnode}, each actor is matched to its row by label, whatever the order of the rows (an actor without a row, or with two rows, is refused with return code 198); without \texttt{\_nwnode} the dataset must have exactly one row per actor, and row $i$ is actor $i$ of the event network.
 
 \section{Effects that cannot be estimated}\label{sec:collinear}
 

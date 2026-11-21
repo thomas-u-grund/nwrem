@@ -46,6 +46,8 @@ Message (return code) & Meaning and remedy\\
 \textit{N actor(s) of net have no row in the current dataset} / \textit{have more than one row} (198) & The covariates and the entry and exit times need exactly one row per actor with the label in \texttt{\_nwnode}; load the dataset with \texttt{nwload net, xvars}.\\
 \textit{the current dataset has N observations but net has M actors} (198) & Without \texttt{\_nwnode} the data need one row per actor, in the actor order of the network.\\
 \textit{covsnd(x): N actor(s) have a missing value} (416) & The covariate must be defined for every actor. \\
+\textit{covmatch(label): the node labels of the networks differ / a label occurs twice} (459) & With \opt{covmatch(label)} the label sets of the covariate network and of the event network must be identical, each label once.\\
+\textit{Warning: ... matched to the event network by position, but the node labels are in a DIFFERENT ORDER} (note, no error) & With the default position matching the networks are read row by row; fit again with \opt{covmatch(label)} or reorder the network.\\
 \textit{covevent() network has N actors} (198), \textit{has missing tie values} (416), two-mode (6088) & A covariate network must have the same actors, no missing ties and one mode.\\
 \textit{N event(s) have a sender or receiver that is not an actor}, \textit{a missing event time} (416) & Drop such rows before \texttt{nwset}.\\
 \textit{event k has sender == receiver} (3498) & A self-loop; drop such rows.\\

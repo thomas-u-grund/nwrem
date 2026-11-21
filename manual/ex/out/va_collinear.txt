@@ -34,7 +34,7 @@
 (3 vars, 272 obs)
 
 . save `col'
-file /var/folders/hx/2zp2k5ps2y7d_6hx015fcr1h0000gn/T//S_67365.000001 saved
+file /var/folders/hx/2zp2k5ps2y7d_6hx015fcr1h0000gn/T//S_04453.000001 saved
     as .dta format
 
 . import delimited "`ref'/cases.csv", clear varnames(1) asdouble stringcols(1 4
@@ -46,7 +46,7 @@ file /var/folders/hx/2zp2k5ps2y7d_6hx015fcr1h0000gn/T//S_67365.000001 saved
 (60 observations deleted)
 
 . save `cases'
-file /var/folders/hx/2zp2k5ps2y7d_6hx015fcr1h0000gn/T//S_67365.000002 saved
+file /var/folders/hx/2zp2k5ps2y7d_6hx015fcr1h0000gn/T//S_04453.000002 saved
     as .dta format
 
 . local ncase = _N

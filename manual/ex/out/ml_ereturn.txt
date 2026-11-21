@@ -16,7 +16,7 @@ macros:
              e(depvar) : "mail"
                 e(lik) : "ordinal"
               e(title) : "Relational event model (ordinal partial likelihood, .."
-            e(version) : "1.6.0"
+            e(version) : "1.7.0"
           e(estat_cmd) : "nwrem_estat"
             e(cmdline) : "nwrem mail, nodsnd nidrec frpsndsnd frrecsnd"
                 e(cmd) : "nwrem"

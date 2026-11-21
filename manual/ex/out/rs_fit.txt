@@ -13,6 +13,7 @@ Events: 277                            Log likelihood: -2.42e+03
 -----------------------------------------------------
 
 . nwrem within, nodsnd nidrec frpsndsnd riskset(samediv)
+Note: riskset(samediv) matched to the event network by position (labels agree).
 ------------------------------------------------------------
 Relational event model (ordinal partial likelihood, MLE)
 Network: within                        Actors: 144
