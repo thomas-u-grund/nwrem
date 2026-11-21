@@ -4,14 +4,14 @@
 
 ## Bumping the version (one-line change)
 
-The manual's title and citation carry no version number; the title page states the series it describes (`\manualseries`, valid for 1.6.x). The exact version and date of the release that produced the listings are further macros in `nwrem_manual.tex`:
+The manual's title and citation carry no version number; the title page states the series it describes (`\manualseries`, valid for 1.7.x). The exact version and date of the release that produced the listings are further macros in `nwrem_manual.tex`:
 
-    \newcommand{\manualseries}{1.6}
-    \newcommand{\pkgversion}{1.6.0}
-    \newcommand{\pkgdate}{20 November 2026}
-    \newcommand{\corever}{3.29.0}
+    \newcommand{\manualseries}{1.7}
+    \newcommand{\pkgversion}{1.7.0}
+    \newcommand{\pkgdate}{21 November 2026}
+    \newcommand{\corever}{3.33.0}
 
-Change `\manualseries` only for a new minor or major release whose documented behaviour changed. For a patch release change `\pkgversion`, `\pkgdate` and `\corever`, rerun the examples (`make examples`, see below), rebuild (`make pdf`) and check the pages that show version strings. The tag in the installation example of `ch01_intro.tex` (`nwrem/v1.6.0/`, inside a listing, so it cannot use the macro) is the only other place with the number.
+Change `\manualseries` only for a new minor or major release whose documented behaviour changed. For a patch release change `\pkgversion`, `\pkgdate` and `\corever`, rerun the examples (`make examples`, see below), rebuild (`make pdf`) and check the pages that show version strings. The tag in the installation example of `ch01_intro.tex` (`nwrem/v1.7.0/`, inside a listing, so it cannot use the macro) is the only other place with the number.
 
 ## The DOI
 
@@ -35,4 +35,4 @@ The Stata logs (`ex/ex*.log`) are not committed: they contain the licence header
 ## Archiving
 
 
-The PDF is published on the package website (https://nwcommands.org/nwrem/nwrem_manual.pdf); there is no Zenodo record.
+The PDF is published on the package website (https://nwcommands.org/nwrem/nwrem_manual.pdf) and on Zenodo (all-versions DOI 10.5281/zenodo.24398012, `\manualdoi`). A new minor series is uploaded as a new file version of the existing record.

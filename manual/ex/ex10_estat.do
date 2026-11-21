@@ -48,4 +48,6 @@ quietly nwrem mail2, nodsnd nidrec frpsndsnd interval starttime(0) endtime(`=(5 
 *# es_interval
 estat time, bins(8) noplot
 quietly estat time, bins(8) name(tmi) export(../fig/es_timeint.pdf) title("") xsize(4.2) ysize(3.2)
+*# es_actint
+estat actors, role(sender) noplot
 *# end

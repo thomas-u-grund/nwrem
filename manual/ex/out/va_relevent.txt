@@ -41,7 +41,7 @@
 (6 vars, 392 obs)
 
 . save `res'
-file /var/folders/hx/2zp2k5ps2y7d_6hx015fcr1h0000gn/T//S_67365.000001 saved
+file /var/folders/hx/2zp2k5ps2y7d_6hx015fcr1h0000gn/T//S_04453.000001 saved
     as .dta format
 
 . import delimited "`ref'/cases.csv", clear varnames(1) asdouble stringcols(1 4
@@ -50,7 +50,7 @@ file /var/folders/hx/2zp2k5ps2y7d_6hx015fcr1h0000gn/T//S_67365.000001 saved
 (7 vars, 99 obs)
 
 . save `cases'
-file /var/folders/hx/2zp2k5ps2y7d_6hx015fcr1h0000gn/T//S_67365.000002 saved
+file /var/folders/hx/2zp2k5ps2y7d_6hx015fcr1h0000gn/T//S_04453.000002 saved
     as .dta format
 
 . 
@@ -209,7 +209,7 @@ b6           exact: coef  3.09e-13  se  3.59e-14  ll  5.14e-15   rem.dyad: coef
 (3 vars, 250 obs)
 (encoding automatically selected: ISO-8859-1)
 (4 vars, 7 obs)
-file /var/folders/hx/2zp2k5ps2y7d_6hx015fcr1h0000gn/T//S_67365.000004 saved
+file /var/folders/hx/2zp2k5ps2y7d_6hx015fcr1h0000gn/T//S_04453.000004 saved
     as .dta format
 
     Result                      Number of obs
@@ -435,7 +435,7 @@ e_int        exact: coef  8.24e-12  se  1.75e-12  ll  7.64e-15   rem.dyad: coef
 (3 vars, 250 obs)
 (encoding automatically selected: ISO-8859-1)
 (4 vars, 7 obs)
-file /var/folders/hx/2zp2k5ps2y7d_6hx015fcr1h0000gn/T//S_67365.000004 saved
+file /var/folders/hx/2zp2k5ps2y7d_6hx015fcr1h0000gn/T//S_04453.000004 saved
     as .dta format
 
     Result                      Number of obs
@@ -451,7 +451,7 @@ f_cov1       exact: coef  5.49e-09  se  1.11e-09  ll  2.58e-16   rem.dyad: coef
 (3 vars, 250 obs)
 (encoding automatically selected: ISO-8859-1)
 (4 vars, 7 obs)
-file /var/folders/hx/2zp2k5ps2y7d_6hx015fcr1h0000gn/T//S_67365.000004 saved
+file /var/folders/hx/2zp2k5ps2y7d_6hx015fcr1h0000gn/T//S_04453.000004 saved
     as .dta format
 
     Result                      Number of obs
@@ -533,7 +533,7 @@ h_maskint    exact: coef  3.70e-08  se  7.67e-09  ll  0.00e+00   rem.dyad: coef
 (3 vars, 300 obs)
 (encoding automatically selected: ISO-8859-1)
 (6 vars, 8 obs)
-file /var/folders/hx/2zp2k5ps2y7d_6hx015fcr1h0000gn/T//S_67365.000004 saved
+file /var/folders/hx/2zp2k5ps2y7d_6hx015fcr1h0000gn/T//S_04453.000004 saved
     as .dta format
 
     Result                      Number of obs
@@ -549,7 +549,7 @@ h_win1       exact: coef  6.13e-12  se  1.71e-13  ll  6.42e-16   rem.dyad: coef
 (3 vars, 300 obs)
 (encoding automatically selected: ISO-8859-1)
 (6 vars, 8 obs)
-file /var/folders/hx/2zp2k5ps2y7d_6hx015fcr1h0000gn/T//S_67365.000004 saved
+file /var/folders/hx/2zp2k5ps2y7d_6hx015fcr1h0000gn/T//S_04453.000004 saved
     as .dta format
 
     Result                      Number of obs
@@ -565,7 +565,7 @@ h_winint     exact: coef  7.13e-11  se  1.27e-11  ll  1.43e-15   rem.dyad: coef
 (3 vars, 300 obs)
 (encoding automatically selected: ISO-8859-1)
 (6 vars, 8 obs)
-file /var/folders/hx/2zp2k5ps2y7d_6hx015fcr1h0000gn/T//S_67365.000004 saved
+file /var/folders/hx/2zp2k5ps2y7d_6hx015fcr1h0000gn/T//S_04453.000004 saved
     as .dta format
 
     Result                      Number of obs
@@ -581,7 +581,7 @@ h_win2       exact: coef  1.65e-07  se  8.47e-09  ll  1.92e-15   rem.dyad: coef
 (3 vars, 300 obs)
 (encoding automatically selected: ISO-8859-1)
 (6 vars, 8 obs)
-file /var/folders/hx/2zp2k5ps2y7d_6hx015fcr1h0000gn/T//S_67365.000004 saved
+file /var/folders/hx/2zp2k5ps2y7d_6hx015fcr1h0000gn/T//S_04453.000004 saved
     as .dta format
 
     Result                      Number of obs
