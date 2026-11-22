@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.7.0  21nov2026 author: Thomas Grund}{...}
+{* *! version 1.7.1  22nov2026 author: Thomas Grund}{...}
 {helpb nwtopical##analysis_dynamicmodels:[NW-2.6.8] Dynamic & Event-Based Models}
 
 {title:Title}
@@ -144,4 +144,4 @@ columns {cmd:events}, {cmd:time_from}, {cmd:time_to}, {cmd:observed}, {cmd:expec
 {p 4 14 2}Help: {help nwrem}{p_end}
 
 {hline}
-{pstd}{it:nwrem version 1.7.0, 21 November 2026}{p_end}{* nwversion}
+{pstd}{it:nwrem version 1.7.1, 22 November 2026}{p_end}{* nwversion}

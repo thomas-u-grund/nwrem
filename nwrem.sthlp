@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.7.0  21nov2026 author: Thomas Grund}{...}
+{* *! version 1.7.1  22nov2026 author: Thomas Grund}{...}
 {marker topic}
 {helpb nwtopical##analysis_dynamicmodels:[NW-2.6.8] Dynamic & Event-Based Models}
 
@@ -505,4 +505,4 @@ A user manual (PDF in the {cmd:manual} folder of the package source) is archived
 {p 4 14 2}Help: {help nwrem_estat}, {help nwset}, {help nwattime}, {help nwergm}, {help nwsaom}{p_end}
 
 {hline}
-{pstd}{it:nwrem version 1.7.0, 21 November 2026}{p_end}{* nwversion}
+{pstd}{it:nwrem version 1.7.1, 22 November 2026}{p_end}{* nwversion}

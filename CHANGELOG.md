@@ -3,6 +3,11 @@
 All notable changes to nwrem are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project uses [Semantic Versioning](https://semver.org/).
 
+## [1.7.1] - 2026-11-22
+
+### Changed
+- Rebuilt for nwcommands 3.36.0; requires core 3.36.0 or later. No other change.
+
 ## [1.7.0] - 2026-11-21
 
 ### Added

@@ -1,4 +1,4 @@
-*! version 1.7.0  21nov2026 nwrem_estat
+*! version 1.7.1  22nov2026 nwrem_estat
 * Copyright (C) 2026 Thomas U. Grund
 * This file is part of nwrem, a Stata package derived from the R package 'relevent' (Carter T. Butts; GPL (>= 2)).
 * nwrem is free software: you can redistribute it and/or modify it under the terms of the GNU General
