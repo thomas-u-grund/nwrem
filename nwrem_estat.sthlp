@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.7.1  22nov2026 author: Thomas Grund}{...}
+{* *! version 1.7.2  23nov2026 author: Thomas Grund}{...}
 {helpb nwtopical##analysis_dynamicmodels:[NW-2.6.8] Dynamic & Event-Based Models}
 
 {title:Title}
@@ -29,7 +29,7 @@
 {pstd}
 These {cmd:estat} subcommands check how well a fitted relational event model reproduces the data. Each one evaluates the
 fitted linear predictor of {it:every} dyad of the risk set at {it:every} event, in the compiled plugin of the package,
-at the coefficients stored in {cmd:e(b)}. R's {it:relevent} has no such diagnostics: they are extensions of {cmd:nwrem}.
+at the coefficients stored in {cmd:e(b)}. R's {it:relevent} has no such diagnostics: they are extensions of {cmd:nwrem}. The standard subcommands of {cmd:estat} ({cmd:estat vce}, {cmd:estat summarize}, {cmd:estat ic}) work after {cmd:nwrem} as after any estimation command.
 
 {pstd}
 The model is set up again exactly as for the fit: {cmd:estat} runs the data preparation of the command line stored in
@@ -144,4 +144,4 @@ columns {cmd:events}, {cmd:time_from}, {cmd:time_to}, {cmd:observed}, {cmd:expec
 {p 4 14 2}Help: {help nwrem}{p_end}
 
 {hline}
-{pstd}{it:nwrem version 1.7.1, 22 November 2026}{p_end}{* nwversion}
+{pstd}{it:nwrem version 1.7.2, 23 November 2026}{p_end}{* nwversion}

@@ -3,6 +3,11 @@
 All notable changes to nwrem are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project uses [Semantic Versioning](https://semver.org/).
 
+## [1.7.2] - 2026-11-23
+
+### Fixed
+- **`estat vce`, `estat summarize` and `estat ic` work after `nwrem`.** `estat` after a fit used to stop with r(321) for every subcommand other than `rank`, `actors` and `time`; the standard subcommands now run as after any estimation command. Ado-only release.
+
 ## [1.7.1] - 2026-11-22
 
 ### Changed
