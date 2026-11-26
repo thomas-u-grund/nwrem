@@ -24,7 +24,7 @@ generate tt = ceil(t*12)
 generate long row = _n
 sort tt row
 duplicates report tt
-nwset sender receiver, eventtime(tt) directed name(tied)
+nwset sender receiver, eventtime(tt) directed name(tied) dropvars
 
 forvalues s = 1/4 {
 	quietly nwrem tied, nodsnd nidrec seed(`s')

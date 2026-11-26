@@ -117,7 +117,7 @@ di as text "Block B: closed-form MLE, covsnd / covrec / covevent on W40"
 di as text "{hline 60}"
 nwclear
 xt_w40
-nwset sender receiver, eventtime(t) directed name(w40)
+nwset sender receiver, eventtime(t) directed name(w40) dropvars
 xt_cov w40
 assert _N == 4
 gen double x01 = (_n >= 3)
@@ -174,7 +174,7 @@ input long sender long receiver double t
 1 2 1
 2 3 2
 end
-nwset sender receiver, eventtime(t) directed name(two)
+nwset sender receiver, eventtime(t) directed name(two) dropvars
 matrix XC3 = (0,1,0 \ 0,0,0 \ 0,0,0)
 nwset, mat(XC3) directed name(c3) nooutput
 nwrem two, covevent(c3) seed(1)
@@ -189,7 +189,7 @@ input long sender long receiver double t
 2 1 2
 1 2 3
 end
-nwset sender receiver, eventtime(t) directed name(pair)
+nwset sender receiver, eventtime(t) directed name(pair) dropvars
 matrix XC2 = (0,1 \ 0,0)
 nwset, mat(XC2) directed name(c2) nooutput
 nwrem pair, covevent(c2) seed(1)
@@ -208,7 +208,7 @@ quietly set obs 30
 gen long sender = _n
 gen long receiver = _n + 30
 gen double t = _n
-nwset sender receiver, eventtime(t) directed name(big)
+nwset sender receiver, eventtime(t) directed name(big) dropvars
 xt_cov big
 assert _N == 60
 gen double xb = (_n <= 10)

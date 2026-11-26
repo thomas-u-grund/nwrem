@@ -47,7 +47,7 @@ di as text "Block A: reference fit on W40 = relevent (nodsnd nidrec)"
 di as text "{hline 60}"
 nwclear
 xt_w40
-nwset sender receiver, eventtime(t) directed name(w40)
+nwset sender receiver, eventtime(t) directed name(w40) dropvars
 nwrem w40, nodsnd nidrec seed(1)
 assert e(N) == 40
 assert e(nodes) == 4
@@ -71,13 +71,13 @@ xt_w40
 set seed 990
 gen double u = runiform()
 sort u
-nwset sender receiver, eventtime(t) directed name(w40u)
+nwset sender receiver, eventtime(t) directed name(w40u) dropvars
 nwrem w40u, nodsnd nidrec seed(1)
 xt_same "rows in random order" 1e-12
 nwclear
 xt_w40
 gsort -t
-nwset sender receiver, eventtime(t) directed name(w40r)
+nwset sender receiver, eventtime(t) directed name(w40r) dropvars
 nwrem w40r, nodsnd nidrec seed(1)
 xt_same "rows in reverse order" 1e-12
 
@@ -91,7 +91,7 @@ foreach texp in "t - 20" "t - 1" "t * 1000" "t^3" "exp(t/10)" "-1/t" "t + 1e9" {
 	nwclear
 	xt_w40
 	quietly replace t = `texp'
-	nwset sender receiver, eventtime(t) directed name(wt`k')
+	nwset sender receiver, eventtime(t) directed name(wt`k') dropvars
 	nwrem wt`k', nodsnd nidrec seed(1)
 	xt_same "time = `texp'" 1e-12
 }
@@ -105,14 +105,14 @@ di as text "{hline 60}"
 nwclear
 xt_w40
 quietly replace t = ceil(t/4)
-nwset sender receiver, eventtime(t) directed name(wtie)
+nwset sender receiver, eventtime(t) directed name(wtie) dropvars
 nwrem wtie, nodsnd nidrec seed(1)
 xt_same "ties, rows in time order" 1e-12
 * all 40 events at ONE time point, rows in the original order -> still the W40 sequence
 nwclear
 xt_w40
 quietly replace t = 0
-nwset sender receiver, eventtime(t) directed name(wone)
+nwset sender receiver, eventtime(t) directed name(wone) dropvars
 nwrem wone, nodsnd nidrec seed(1)
 xt_same "all events at time 0" 1e-12
 * ties listed in reverse order inside each time point: equals distinct times given in that listed order
@@ -123,13 +123,13 @@ gsort t -row
 quietly gen double t2 = _n
 tempfile rev
 quietly save `rev'
-nwset sender receiver, eventtime(t2) directed name(wrev2)
+nwset sender receiver, eventtime(t2) directed name(wrev2) dropvars
 nwrem wrev2, nodsnd nidrec seed(1)
 matrix XB2 = e(b)
 scalar XLL2 = e(ll)
 nwclear
 use `rev', clear
-nwset sender receiver, eventtime(t) directed name(wrev)
+nwset sender receiver, eventtime(t) directed name(wrev) dropvars
 nwrem wrev, nodsnd nidrec seed(1)
 assert mreldif(e(b), XB2) < 1e-12
 assert reldif(e(ll), scalar(XLL2)) < 1e-12
@@ -144,7 +144,7 @@ nwclear
 xt_w40
 gen str3 ss = "A" + string(sender)
 gen str3 rs = "A" + string(receiver)
-nwset ss rs, eventtime(t) directed name(wstr)
+nwset ss rs, eventtime(t) directed name(wstr) dropvars
 assert e(N) == 40
 nwrem wstr, nodsnd nidrec seed(1)
 xt_same "string ids A1..A4" 1e-12
@@ -153,14 +153,14 @@ nwclear
 xt_w40
 gen str1 ss = word("d c b a", sender)
 gen str1 rs = word("d c b a", receiver)
-nwset ss rs, eventtime(t) directed name(wperm)
+nwset ss rs, eventtime(t) directed name(wperm) dropvars
 nwrem wperm, nodsnd nidrec seed(1)
 xt_same "string ids in reversed sort order (actor permutation)" 1e-5
 * mixed: numeric sender, string receiver with the same ids
 nwclear
 xt_w40
 gen str1 rs = string(receiver)
-nwset sender rs, eventtime(t) directed name(wmix)
+nwset sender rs, eventtime(t) directed name(wmix) dropvars
 nwrem wmix, nodsnd nidrec seed(1)
 xt_same "numeric sender, string receiver" 1e-12
 * offset and non-consecutive numeric ids (order preserved)
@@ -173,7 +173,7 @@ foreach map in "100 + @" "cond(@==1,1,cond(@==2,5,cond(@==3,17,1000)))" "1000000
 	local er = subinstr("`map'", "@", "receiver", .)
 	quietly replace sender = `es'
 	quietly replace receiver = `er'
-	nwset sender receiver, eventtime(t) directed name(wid`k')
+	nwset sender receiver, eventtime(t) directed name(wid`k') dropvars
 	if `k' == 3 {
 		// CORE BUG S1 (not nwrem): ids of 8 or more digits (here 10000001..) -> core nwset labels events with
 		// strofreal() %9.0g ("n1.00e+07"), nwfromedge names nodes with %18.0g: events get actor index 0. nwrem now
@@ -194,7 +194,7 @@ nwclear
 xt_w40
 quietly replace sender = cond(sender==1,3,cond(sender==2,1,cond(sender==3,4,2)))
 quietly replace receiver = cond(receiver==1,3,cond(receiver==2,1,cond(receiver==3,4,2)))
-nwset sender receiver, eventtime(t) directed name(wnperm)
+nwset sender receiver, eventtime(t) directed name(wnperm) dropvars
 nwrem wnperm, nodsnd nidrec seed(1)
 xt_same "numeric id permutation" 1e-5
 
@@ -205,7 +205,7 @@ di as text "{hline 60}"
 nwclear
 xt_w40
 gen double w = mod(_n, 3) + 1
-nwset sender receiver w, eventtime(t) directed name(wval)
+nwset sender receiver w, eventtime(t) directed name(wval) dropvars
 nwrem wval, nodsnd nidrec seed(1)
 xt_same "valued event network" 1e-12
 
@@ -221,14 +221,14 @@ sort row
 quietly gen double t2 = _n
 tempfile dup
 quietly save `dup'
-nwset sender receiver, eventtime(t) directed name(wdup)
+nwset sender receiver, eventtime(t) directed name(wdup) dropvars
 nwrem wdup, nodsnd nidrec seed(1)
 assert e(N) == 80
 matrix XB3 = e(b)
 scalar XLL3 = e(ll)
 nwclear
 use `dup', clear
-nwset sender receiver, eventtime(t2) directed name(wdup2)
+nwset sender receiver, eventtime(t2) directed name(wdup2) dropvars
 nwrem wdup2, nodsnd nidrec seed(1)
 assert mreldif(e(b), XB3) < 1e-12
 assert reldif(e(ll), scalar(XLL3)) < 1e-12
